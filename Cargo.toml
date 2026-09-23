@@ -7,6 +7,7 @@ description = "Binance 公开 REST 数据的类型层：四族值对象、离线
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/bytechainx/binancex"
 homepage = "https://github.com/bytechainx/binancex"
+documentation = "https://github.com/bytechainx/binancex#readme"
 readme = "README.md"
 keywords = ["binance", "crypto", "data-source", "types", "offline"]
 categories = ["data-structures", "parsing"]
