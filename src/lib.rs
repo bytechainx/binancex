@@ -9,6 +9,7 @@
 //! - [`value`] —— 共享内核与四族值对象门面
 //! - [`authz`] —— fail-closed 授权判定（无签核恒 `Denied`）
 //! - [`parse`] —— 离线解析（无网络参数）
+//! - [`value::spot`] / [`value::usdm`] / [`value::coinm`] / [`value::options`] —— 四族值对象
 //!
 //! ## 非目标
 //!
@@ -35,6 +36,6 @@ pub use authz::{
 };
 pub use error::{BinanceError, BinanceErrorKind, BinanceResult};
 pub use value::{
-    DataSeriesId, Date, EndpointId, Interval, PitEligibility, Quantity, QuantityUnit, Sign,
-    TimePrecision,
+    DataSeriesId, Date, Decimal, EndpointId, Interval, PitEligibility, Quantity, QuantityUnit,
+    Sign, TimePrecision, WhitelistSnapshot,
 };

@@ -54,22 +54,35 @@ impl fmt::Display for QuantityUnit {
 pub struct Decimal(String);
 
 impl Decimal {
-    /// 从字符串构造（校验格式：非空、仅 `[0-9.+-eE]`）。
+    /// 从字符串构造，接受可选符号、小数点与科学计数指数。
+    ///
+    /// 有效数字部分至少含一位数字；指数若出现，须含至少一位整数数字。
     ///
     /// # Errors
     ///
-    /// - [`BinanceErrorKind::Invalid`]：空串或含非法字符
+    /// - [`BinanceErrorKind::Invalid`]：不符合十进制语法
     pub fn new(input: &str) -> BinanceResult<Self> {
-        if input.is_empty() {
-            return Err(BinanceError::new(BinanceErrorKind::Invalid, "十进制为空"));
-        }
-        let valid = input
-            .chars()
-            .all(|c| c.is_ascii_digit() || matches!(c, '.' | '+' | '-' | 'e' | 'E'));
-        if !valid {
+        let unsigned = input.strip_prefix(['+', '-']).unwrap_or(input);
+        let (mantissa, exponent) = unsigned
+            .split_once(['e', 'E'])
+            .map_or((unsigned, None), |(value, exponent)| {
+                (value, Some(exponent))
+            });
+        let digits = |value: &str| value.bytes().all(|byte| byte.is_ascii_digit());
+        let valid_mantissa = match mantissa.split_once('.') {
+            Some((whole, fraction)) => {
+                !(whole.is_empty() && fraction.is_empty()) && digits(whole) && digits(fraction)
+            }
+            None => !mantissa.is_empty() && digits(mantissa),
+        };
+        let valid_exponent = exponent.map_or(true, |value| {
+            let value = value.strip_prefix(['+', '-']).unwrap_or(value);
+            !value.is_empty() && digits(value)
+        });
+        if !valid_mantissa || !valid_exponent {
             return Err(BinanceError::new(
                 BinanceErrorKind::Invalid,
-                "十进制含非法字符",
+                "十进制数值格式无效",
             ));
         }
         Ok(Self(input.to_owned()))
@@ -84,24 +97,25 @@ impl Decimal {
     /// 判零（按数值；`-0` 与 `0` 均为 [`Sign::Zero`]）。
     #[must_use]
     pub fn sign(&self) -> Sign {
-        let t = self.0.trim_start_matches('+');
-        if t.starts_with('-') {
-            // -0 按数值判零
-            let body = t.strip_prefix('-').unwrap_or(t);
-            let stripped = body.replace(['.', '0'], "");
-            if stripped.is_empty() {
-                Sign::Zero
-            } else {
-                Sign::Negative
-            }
+        // 指数不改变零与正负号，只检查有效数字部分。
+        let mantissa = self.0.split(['e', 'E']).next().unwrap_or(&self.0);
+        if !mantissa.bytes().any(|byte| matches!(byte, b'1'..=b'9')) {
+            Sign::Zero
+        } else if mantissa.starts_with('-') {
+            Sign::Negative
         } else {
-            let stripped = t.replace(['.', '0'], "");
-            if stripped.is_empty() {
-                Sign::Zero
-            } else {
-                Sign::Positive
-            }
+            Sign::Positive
         }
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Decimal {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let raw = <String as serde::Deserialize>::deserialize(deserializer)?;
+        Self::new(&raw).map_err(serde::de::Error::custom)
     }
 }
 
@@ -187,6 +201,18 @@ mod tests {
     use super::*;
 
     #[test]
+    fn public_decimal_validator_uses_constructor_syntax() {
+        for input in ["1e3", "-0", "+001.2300E-999", ".5"] {
+            assert!(crate::value::validate_decimal(input).is_ok());
+        }
+        for input in ["+", "1..2", "1e", ""] {
+            let error = crate::value::validate_decimal(input).unwrap_err();
+            assert_eq!(error.kind(), BinanceErrorKind::Invalid);
+            assert_eq!(error.kind(), Decimal::new(input).unwrap_err().kind());
+        }
+    }
+
+    #[test]
     fn negative_quantity_preserves_sign() {
         let q = Quantity::new("-4.70443515", QuantityUnit::BaseAsset).unwrap();
         assert_eq!(q.sign(), Sign::Negative);
@@ -217,5 +243,52 @@ mod tests {
     fn invalid_decimal_rejected() {
         assert!(Quantity::new("", QuantityUnit::BaseAsset).is_err());
         assert!(Quantity::new("abc", QuantityUnit::BaseAsset).is_err());
+    }
+
+    #[test]
+    fn decimal_deserialization_preserves_wire_string() {
+        let value: Decimal = serde_json::from_str(r#""-0""#).unwrap();
+        assert_eq!(value.as_str(), "-0");
+        assert_eq!(value.sign(), Sign::Zero);
+    }
+
+    #[test]
+    fn decimal_deserialization_validates_syntax_without_normalizing() {
+        for (input, sign) in [
+            ("-4.70443515", Sign::Negative),
+            ("-0.000e+999", Sign::Zero),
+            ("+001.2300E-999", Sign::Positive),
+            (".5", Sign::Positive),
+            ("1.", Sign::Positive),
+            ("123456789012345678901234567890.00001", Sign::Positive),
+        ] {
+            let json = serde_json::to_string(input).unwrap();
+            let parsed: Decimal = serde_json::from_str(&json).unwrap();
+            assert_eq!(parsed, Decimal::new(input).unwrap());
+            assert_eq!(parsed.as_str(), input);
+            assert_eq!(parsed.sign(), sign);
+            assert_eq!(
+                Quantity::new(input, QuantityUnit::BaseAsset)
+                    .unwrap()
+                    .sign(),
+                sign
+            );
+        }
+        for input in [
+            "", "+", "-", ".", "1e", "1..2", "1e+", "e2", "--1", "1-2", "1e2e3", " 1", "NaN",
+            "１２",
+        ] {
+            let json = serde_json::to_string(input).unwrap();
+            assert!(Decimal::new(input).is_err(), "构造器须拒绝：{input}");
+            assert!(
+                serde_json::from_str::<Decimal>(&json).is_err(),
+                "反序列化须拒绝：{input}"
+            );
+            let quantity = format!(r#"{{"value":{json},"unit":"BaseAsset"}}"#);
+            assert!(serde_json::from_str::<Quantity>(&quantity).is_err());
+        }
+        for input in ["123", "null", "true", "[]", "{}"] {
+            assert!(serde_json::from_str::<Decimal>(input).is_err());
+        }
     }
 }

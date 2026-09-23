@@ -3,6 +3,289 @@
 //! 入口形态为「字符串/字节 → 值对象集合」；未知字段原子失败。
 
 use crate::error::{BinanceError, BinanceErrorKind, BinanceResult};
+pub use crate::value::WhitelistSnapshot;
+use serde::de::{DeserializeSeed, MapAccess, SeqAccess, Visitor};
+use std::fmt;
+
+pub mod coinm;
+pub mod options;
+pub mod spot;
+pub mod usdm;
+
+/// 反序列化冻结响应结构；已登记字段的对象必须为非空映射，未知字段原子失败。
+pub(crate) fn deserialize_strict<T: serde::de::DeserializeOwned>(input: &str) -> BinanceResult<T> {
+    let mut deserializer = serde_json::Deserializer::from_str(input);
+    let value = T::deserialize(StrictDeserializer(&mut deserializer)).map_err(classify_error)?;
+    deserializer.end().map_err(classify_error)?;
+    Ok(value)
+}
+
+/// serde 的原始错误仅用于分类，公开消息不含响应内容或英文诊断。
+fn classify_error(error: serde_json::Error) -> BinanceError {
+    let detail = error.to_string();
+    let (kind, message) = if detail.starts_with("unknown field `") {
+        (BinanceErrorKind::UnknownField, "响应含契约未登记字段")
+    } else if detail.starts_with("BINANCEX_LOSSY_NUMERIC")
+        || detail.starts_with("number out of range")
+        || detail.starts_with("数值失真:")
+    {
+        (BinanceErrorKind::LossyNumeric, "响应数值超出承载范围")
+    } else if error.is_syntax() || error.is_eof() {
+        (BinanceErrorKind::Invalid, "响应不是完整的合法 JSON")
+    } else {
+        (
+            BinanceErrorKind::SchemaMismatch,
+            "响应结构或取值类型与契约不符",
+        )
+    };
+    BinanceError::new(kind, message)
+}
+
+/// serde 默认允许结构体从位置数组读取；递归包装每层入口关闭该兼容行为。
+struct StrictDeserializer<D>(D);
+
+macro_rules! strict_integer {
+    ($($method:ident),+ $(,)?) => {$ (
+        fn $method<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
+            self.0.$method(IntegerVisitor(visitor))
+        }
+    )+};
+}
+
+/// 整数入口保留原始 JSON 类型检查；越界及浮点通路均拒绝。
+struct IntegerVisitor<V>(V);
+
+macro_rules! visit_integer {
+    ($($method:ident: $kind:ty),+ $(,)?) => {$ (
+        fn $method<E: serde::de::Error>(self, value: $kind) -> Result<Self::Value, E> {
+            self.0.$method::<E>(value).map_err(|_| E::custom("BINANCEX_LOSSY_NUMERIC"))
+        }
+    )+};
+}
+
+impl<'de, V: Visitor<'de>> Visitor<'de> for IntegerVisitor<V> {
+    type Value = V::Value;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.expecting(formatter)
+    }
+
+    visit_integer! {
+        visit_i64: i64, visit_u64: u64, visit_i128: i128, visit_u128: u128,
+    }
+
+    fn visit_f64<E: serde::de::Error>(self, _value: f64) -> Result<Self::Value, E> {
+        Err(E::custom("BINANCEX_LOSSY_NUMERIC"))
+    }
+}
+
+impl<'de, D: serde::Deserializer<'de>> serde::Deserializer<'de> for StrictDeserializer<D> {
+    type Error = D::Error;
+
+    fn deserialize_any<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
+        self.0.deserialize_any(StrictVisitor(visitor, false))
+    }
+
+    fn deserialize_struct<V: Visitor<'de>>(
+        self,
+        _name: &'static str,
+        fields: &'static [&'static str],
+        visitor: V,
+    ) -> Result<V::Value, Self::Error> {
+        self.0
+            .deserialize_map(StrictVisitor(visitor, !fields.is_empty()))
+    }
+
+    fn deserialize_option<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
+        self.0.deserialize_option(StrictVisitor(visitor, false))
+    }
+
+    fn deserialize_newtype_struct<V: Visitor<'de>>(
+        self,
+        name: &'static str,
+        visitor: V,
+    ) -> Result<V::Value, Self::Error> {
+        self.0
+            .deserialize_newtype_struct(name, StrictVisitor(visitor, false))
+    }
+
+    fn deserialize_enum<V: Visitor<'de>>(
+        self,
+        name: &'static str,
+        variants: &'static [&'static str],
+        visitor: V,
+    ) -> Result<V::Value, Self::Error> {
+        self.0
+            .deserialize_enum(name, variants, StrictVisitor(visitor, false))
+    }
+
+    strict_integer! {
+        deserialize_i8, deserialize_i16, deserialize_i32,
+        deserialize_i64, deserialize_i128, deserialize_u8,
+        deserialize_u16, deserialize_u32, deserialize_u64,
+        deserialize_u128,
+    }
+
+    serde::forward_to_deserialize_any! {
+        bool f32 f64 char str string bytes byte_buf unit unit_struct seq tuple
+        tuple_struct map identifier ignored_any
+    }
+}
+
+struct StrictVisitor<V>(V, bool);
+
+macro_rules! visit_scalar {
+    ($($method:ident: $kind:ty),+ $(,)?) => {$ (
+        fn $method<E: serde::de::Error>(self, value: $kind) -> Result<Self::Value, E> {
+            self.0.$method(value)
+        }
+    )+};
+}
+
+impl<'de, V: Visitor<'de>> Visitor<'de> for StrictVisitor<V> {
+    type Value = V::Value;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.expecting(formatter)
+    }
+
+    visit_scalar! {
+        visit_bool: bool, visit_i64: i64, visit_u64: u64, visit_i128: i128,
+        visit_u128: u128, visit_f64: f64, visit_char: char, visit_str: &str,
+        visit_borrowed_str: &'de str, visit_string: String, visit_bytes: &[u8],
+        visit_borrowed_bytes: &'de [u8], visit_byte_buf: Vec<u8>,
+    }
+
+    fn visit_unit<E: serde::de::Error>(self) -> Result<Self::Value, E> {
+        self.0.visit_unit()
+    }
+
+    fn visit_none<E: serde::de::Error>(self) -> Result<Self::Value, E> {
+        self.0.visit_none()
+    }
+
+    fn visit_some<D: serde::Deserializer<'de>>(
+        self,
+        deserializer: D,
+    ) -> Result<Self::Value, D::Error> {
+        self.0.visit_some(StrictDeserializer(deserializer))
+    }
+
+    fn visit_newtype_struct<D: serde::Deserializer<'de>>(
+        self,
+        deserializer: D,
+    ) -> Result<Self::Value, D::Error> {
+        self.0
+            .visit_newtype_struct(StrictDeserializer(deserializer))
+    }
+
+    fn visit_seq<A: SeqAccess<'de>>(self, access: A) -> Result<Self::Value, A::Error> {
+        self.0.visit_seq(StrictAccess(access, 0))
+    }
+
+    fn visit_map<A: MapAccess<'de>>(self, access: A) -> Result<Self::Value, A::Error> {
+        let mut access = StrictAccess(access, 0);
+        let result = self.0.visit_map(&mut access)?;
+        if self.1 && access.1 == 0 {
+            return Err(serde::de::Error::custom("BINANCEX_EMPTY_OBJECT"));
+        }
+        Ok(result)
+    }
+
+    fn visit_enum<A: serde::de::EnumAccess<'de>>(self, access: A) -> Result<Self::Value, A::Error> {
+        self.0.visit_enum(StrictAccess(access, 0))
+    }
+}
+
+struct StrictSeed<S>(S);
+
+impl<'de, S: DeserializeSeed<'de>> DeserializeSeed<'de> for StrictSeed<S> {
+    type Value = S::Value;
+
+    fn deserialize<D: serde::Deserializer<'de>>(
+        self,
+        deserializer: D,
+    ) -> Result<Self::Value, D::Error> {
+        self.0.deserialize(StrictDeserializer(deserializer))
+    }
+}
+
+struct StrictAccess<A>(A, usize);
+
+impl<'de, A: SeqAccess<'de>> SeqAccess<'de> for StrictAccess<A> {
+    type Error = A::Error;
+
+    fn next_element_seed<S: DeserializeSeed<'de>>(
+        &mut self,
+        seed: S,
+    ) -> Result<Option<S::Value>, Self::Error> {
+        self.0.next_element_seed(StrictSeed(seed))
+    }
+}
+
+impl<'de, A: MapAccess<'de>> MapAccess<'de> for StrictAccess<A> {
+    type Error = A::Error;
+
+    fn next_key_seed<S: DeserializeSeed<'de>>(
+        &mut self,
+        seed: S,
+    ) -> Result<Option<S::Value>, Self::Error> {
+        let key = self.0.next_key_seed(seed)?;
+        self.1 += usize::from(key.is_some());
+        Ok(key)
+    }
+
+    fn next_value_seed<S: DeserializeSeed<'de>>(
+        &mut self,
+        seed: S,
+    ) -> Result<S::Value, Self::Error> {
+        self.0.next_value_seed(StrictSeed(seed))
+    }
+}
+
+impl<'de, A: serde::de::EnumAccess<'de>> serde::de::EnumAccess<'de> for StrictAccess<A> {
+    type Error = A::Error;
+    type Variant = StrictAccess<A::Variant>;
+
+    fn variant_seed<S: DeserializeSeed<'de>>(
+        self,
+        seed: S,
+    ) -> Result<(S::Value, Self::Variant), Self::Error> {
+        let (value, variant) = self.0.variant_seed(seed)?;
+        Ok((value, StrictAccess(variant, 0)))
+    }
+}
+
+impl<'de, A: serde::de::VariantAccess<'de>> serde::de::VariantAccess<'de> for StrictAccess<A> {
+    type Error = A::Error;
+
+    fn unit_variant(self) -> Result<(), Self::Error> {
+        self.0.unit_variant()
+    }
+
+    fn newtype_variant_seed<S: DeserializeSeed<'de>>(
+        self,
+        seed: S,
+    ) -> Result<S::Value, Self::Error> {
+        self.0.newtype_variant_seed(StrictSeed(seed))
+    }
+
+    fn tuple_variant<V: Visitor<'de>>(
+        self,
+        len: usize,
+        visitor: V,
+    ) -> Result<V::Value, Self::Error> {
+        self.0.tuple_variant(len, StrictVisitor(visitor, false))
+    }
+
+    fn struct_variant<V: Visitor<'de>>(
+        self,
+        fields: &'static [&'static str],
+        visitor: V,
+    ) -> Result<V::Value, Self::Error> {
+        self.0.struct_variant(fields, StrictVisitor(visitor, true))
+    }
+}
 
 /// 白名单快照观测——传入 `parse_exchange_info` 的四要素。
 #[derive(Debug, Clone)]
@@ -15,32 +298,6 @@ pub struct WhitelistObservation<'a> {
     pub source_endpoint_version: &'a str,
     /// 观测时刻（毫秒，i64 无损承载）
     pub observed_at_ms: i64,
-}
-
-/// 白名单快照解析结果（身份四要素）。
-///
-/// `content_sha256` 由库对 `raw` 的 UTF-8 字节计算（SHA-256，hex 小写）。
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WhitelistSnapshot {
-    /// 产品族
-    pub family: String,
-    /// 来源端点版本（调用方提供）
-    pub source_endpoint_version: String,
-    /// 内容哈希（库计算）
-    pub content_sha256: String,
-    /// 观测时刻（毫秒）
-    pub observed_at_ms: i64,
-}
-
-impl WhitelistSnapshot {
-    /// 快照身份（family + 版本 + 哈希 + 时刻）。
-    #[must_use]
-    pub fn snapshot_id(&self) -> String {
-        format!(
-            "{}/{}@{}#{}",
-            self.family, self.source_endpoint_version, self.observed_at_ms, self.content_sha256
-        )
-    }
 }
 
 /// 解析 exchangeInfo 为白名单快照。
@@ -56,12 +313,7 @@ pub fn parse_exchange_info(obs: WhitelistObservation<'_>) -> BinanceResult<White
         return Err(BinanceError::new(BinanceErrorKind::Invalid, "family 为空"));
     }
     // raw 须为合法 JSON（不深校验结构——结构合同归 response-structures.json）
-    let _: serde_json::Value = serde_json::from_str(obs.raw).map_err(|e| {
-        BinanceError::new(
-            BinanceErrorKind::Invalid,
-            format!("exchangeInfo JSON 解析失败：{e}"),
-        )
-    })?;
+    let _: serde_json::Value = serde_json::from_str(obs.raw).map_err(classify_error)?;
     use sha2::{Digest, Sha256};
     let sha = Sha256::digest(obs.raw.as_bytes());
     Ok(WhitelistSnapshot {
@@ -136,5 +388,118 @@ mod tests {
         let unknown = vec!["foo".to_owned()];
         assert!(reject_unknown_fields(&unknown).is_err());
         assert!(reject_unknown_fields(&[]).is_ok());
+    }
+
+    #[test]
+    fn parsers_reject_root_and_nested_object_arrays() {
+        for (raw, kind) in [
+            ("[null,null,null]", BinanceErrorKind::SchemaMismatch),
+            ("{}", BinanceErrorKind::Missing),
+        ] {
+            assert_eq!(spot::parse_spot_avg_price(raw).unwrap_err().kind(), kind);
+        }
+        for raw in [
+            r#"{"rateLimits":[[null,null,null,null,null]]}"#,
+            r#"{"rateLimits":[{}]}"#,
+            r#"{"rateLimits":[{"limit":1}],"symbols":[[]]}"#,
+        ] {
+            assert_eq!(
+                spot::parse_spot_exchange_info(raw).unwrap_err().kind(),
+                BinanceErrorKind::SchemaMismatch
+            );
+        }
+        assert!(spot::parse_spot_exchange_info(r#"{"rateLimits":[{"limit":1}]}"#).is_ok());
+    }
+
+    #[test]
+    fn parsers_classify_unknown_syntax_and_type_errors_without_raw_text() {
+        for raw in [
+            r#"{"secret_payload":1}"#,
+            r#"{"rateLimits":[{"secret_payload":1}]}"#,
+        ] {
+            let error = spot::parse_spot_exchange_info(raw).unwrap_err();
+            assert_eq!(error.kind(), BinanceErrorKind::UnknownField);
+            assert_eq!(error.message(), "响应含契约未登记字段");
+        }
+        for raw in ["{", r#"{"mins":1}" trailing"#, r#"{"mins":1,}"#] {
+            let error = spot::parse_spot_avg_price(raw).unwrap_err();
+            assert_eq!(error.kind(), BinanceErrorKind::Invalid);
+            assert_eq!(error.message(), "响应不是完整的合法 JSON");
+        }
+        for raw in [
+            r#"{"price":"1","closeTime":1,"mins":"1"}"#,
+            r#"{"price":"1","closeTime":1,"mins":1,"mins":2}"#,
+            r#"{"price":"1","closeTime":1,"mins":"unknown field"}"#,
+            r#"{"price":"1","closeTime":1,"mins":"BINANCEX_LOSSY_NUMERIC"}"#,
+            r#"{"price":"1","closeTime":1,"mins":{"$serde_json::private::Number":"1"}}"#,
+        ] {
+            assert_eq!(
+                spot::parse_spot_avg_price(raw).unwrap_err().kind(),
+                BinanceErrorKind::SchemaMismatch
+            );
+        }
+    }
+
+    #[test]
+    fn parsers_preserve_integer_precision_and_classify_overflow() {
+        let value =
+            spot::parse_spot_avg_price(r#"{"price":"1","closeTime":9007199254740993}"#).unwrap();
+        assert_eq!(value.close_time, Some(9_007_199_254_740_993));
+        for raw in [
+            r#"{"price":"1","closeTime":9223372036854775807}"#,
+            r#"{"price":"1","closeTime":-9223372036854775808}"#,
+        ] {
+            assert!(spot::parse_spot_avg_price(raw).is_ok());
+        }
+        for raw in [
+            r#"{"price":"1","closeTime":9223372036854775808}"#,
+            r#"{"price":"1","closeTime":-9223372036854775809}"#,
+            r#"{"price":"1","closeTime":18446744073709551616}"#,
+            r#"{"price":"1","closeTime":1,"mins":1e1000}"#,
+            r#"{"price":"1","closeTime":1,"mins":1.5}"#,
+        ] {
+            let error = spot::parse_spot_avg_price(raw).unwrap_err();
+            assert_eq!(error.kind(), BinanceErrorKind::LossyNumeric);
+            assert_eq!(error.message(), "响应数值超出承载范围");
+        }
+        for raw in [
+            r#"{"price":"1","closeTime":1e1000}"#,
+            r#"{"price":"1","closeTime":1.5}"#,
+        ] {
+            assert_eq!(
+                spot::parse_spot_avg_price(raw).unwrap_err().kind(),
+                BinanceErrorKind::Invalid
+            );
+        }
+    }
+
+    #[test]
+    fn strict_objects_preserve_forms_fixed_tuples_and_decimal_strings() {
+        // 冻结合同将 assets 元素暂记为空字段对象，须保留该显式例外。
+        assert!(usdm::parse_usdm_insurance_balance(r#"{"assets":[{}]}"#).is_ok());
+        assert!(usdm::parse_usdm_insurance_balance(r#"{"assets":[[]]}"#).is_err());
+        assert_eq!(
+            usdm::parse_usdm_insurance_balance(r#"{"assets":[{"futureField":1}]}"#)
+                .unwrap_err()
+                .kind(),
+            BinanceErrorKind::UnknownField
+        );
+        assert!(spot::parse_spot_ticker_price(r#"{"symbol":"BTCUSDT"}"#).is_ok());
+        assert!(spot::parse_spot_ticker_price(r#"[{"symbol":"BTCUSDT"}]"#).is_ok());
+        assert!(spot::parse_spot_ticker_price("[[null,null]]").is_err());
+        assert!(spot::parse_spot_kline(r#"[[1,"1","1","1","1","1",2,"1",3,"1","1","0"]]"#).is_ok());
+        assert!(
+            spot::parse_spot_kline(r#"[[1,"1","1","1","1","1",2,"1",3,"1","1","0",0]]"#).is_err()
+        );
+        let value = spot::parse_spot_reference_price(
+            r#"{"referencePrice":"123456789012345678901234567890.0123456789"}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            value.reference_price.unwrap().as_str(),
+            "123456789012345678901234567890.0123456789"
+        );
+        let value = spot::parse_spot_reference_price(r#"{"symbol":"BTCUSDT"}"#).unwrap();
+        assert!(value.reference_price.is_none());
     }
 }
