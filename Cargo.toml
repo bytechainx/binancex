@@ -1,0 +1,33 @@
+[package]
+name = "binancex"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.77"
+description = "Binance 公开 REST 数据的类型层：四族值对象、离线解析与 fail-closed 授权判定"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/bytechainx/binancex"
+homepage = "https://github.com/bytechainx/binancex"
+documentation = "https://github.com/bytechainx/binancex#readme"
+readme = "README.md"
+keywords = ["binance", "crypto", "data-source", "types", "offline"]
+categories = ["data-structures", "parsing"]
+include = [
+    "src/**/*",
+    "tests/**/*",
+    "docs/**/*",
+    "README.md",
+    "CHANGELOG.md",
+    "CONTEXT.md",
+    "CONTRIBUTING.md",
+    "LICENSE-*",
+    "Cargo.toml",
+]
+
+[dependencies]
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["arbitrary_precision"] }
+sha2 = "0.10"
+
+[package.metadata.bytechainx]
+production_decision = "NO-GO"
