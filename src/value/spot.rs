@@ -258,11 +258,6 @@ pub struct SpotExchangeInfoSorsItem {
 ///
 /// 待核实：T_PLUS_SELL 的 OpenAPI 分支列出 `endTime`，但未约束判别值且允许其他已登记字段；分支字段集仍开放。
 ///
-/// 待核实：permissionSets 表类型为 array[]（数组的数组）；内层元素类型按 Example Responses 实例（string）冻结
-///
-/// 待核实：timezone 归根对象（Example Responses JSON 实例路径证实）
-///
-/// 待核实：sors 为可选字段（源注明 Optional. Present only when SOR is available.），Example Responses 未含 sors 实例
 /// 冻结的 SpotExchangeInfo 响应对象。
 #[derive(Debug, Clone, serde::Deserialize)]
 #[serde(deny_unknown_fields)]

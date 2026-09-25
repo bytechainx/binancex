@@ -41,7 +41,7 @@ pub struct UsdmAssetIndexItem {
 }
 
 /// USDM 对象或数组响应 UsdmAssetIndex。
-/// 开放点：Variant 2（type=array）元素字段表未在渲染源单独列出（全文件无 Properties for Variant 2 段）；array 形 item 按 Variant 1 object 形状推断。
+/// Variant 2（type=array）元素按冻结响应结构合同映射为 `UsdmAssetIndexItem`。
 #[derive(Debug, Clone, PartialEq, serde::Deserialize)]
 #[serde(untagged)]
 pub enum UsdmAssetIndex {

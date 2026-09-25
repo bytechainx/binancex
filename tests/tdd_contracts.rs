@@ -747,12 +747,22 @@ fn identities_keep_route_and_market_separate() {
     assert_eq!(endpoint.path(), "/fapi/v1/ticker/price");
     assert_eq!(endpoint.version(), "/fapi/v1");
     let instrument = Instrument::Symbol("SYNTH".into());
-    let series = DataSeriesId::new("spot", instrument.clone(), "native");
+    let series = DataSeriesId::new("spot", instrument.clone(), "1m", "trade-kline");
     assert_eq!(series.market(), "spot");
     assert_eq!(
         series.entity(),
         &binancex::DataSeriesEntity::Instrument(instrument)
     );
+}
+
+#[test]
+fn data_series_identity_includes_semantic_dimension() {
+    let instrument = Instrument::Symbol("SYNTH".into());
+    let klines = DataSeriesId::new("spot", instrument.clone(), "1m", "trade-kline");
+    let ui_klines = DataSeriesId::new("spot", instrument, "1m", "ui-kline");
+    assert_ne!(klines, ui_klines);
+    assert_eq!(klines.variant(), "1m");
+    assert_eq!(klines.semantic_dimension(), "trade-kline");
 }
 
 #[test]

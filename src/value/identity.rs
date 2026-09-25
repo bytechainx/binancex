@@ -70,13 +70,14 @@ impl fmt::Display for EndpointId {
 
 /// 数据系列身份（业务身份，不含 `EndpointId`）。
 ///
-/// `DataSeriesId = actual_market_family + Instrument/Subject + variant + 语义维度`。
+/// `DataSeriesId = actual_market_family + Instrument/Subject + 原生变体 + 语义维度`。
 /// 同一业务事实经两条已证明等价路由时，业务身份唯一，来源关系保留两份。
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DataSeriesId {
     actual_market_family: String,
     entity: DataSeriesEntity,
     variant: String,
+    semantic_dimension: String,
 }
 
 impl DataSeriesId {
@@ -86,11 +87,13 @@ impl DataSeriesId {
         actual_market_family: impl Into<String>,
         entity: impl Into<DataSeriesEntity>,
         variant: impl Into<String>,
+        semantic_dimension: impl Into<String>,
     ) -> Self {
         Self {
             actual_market_family: actual_market_family.into(),
             entity: entity.into(),
             variant: variant.into(),
+            semantic_dimension: semantic_dimension.into(),
         }
     }
 
@@ -104,6 +107,18 @@ impl DataSeriesId {
     #[must_use]
     pub fn entity(&self) -> &DataSeriesEntity {
         &self.entity
+    }
+
+    /// 原生离散变体。
+    #[must_use]
+    pub fn variant(&self) -> &str {
+        &self.variant
+    }
+
+    /// 序列语义维度；例如区分 Spot klines 与 uiKlines。
+    #[must_use]
+    pub fn semantic_dimension(&self) -> &str {
+        &self.semantic_dimension
     }
 }
 
