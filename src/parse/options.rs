@@ -6,6 +6,77 @@ use crate::error::{BinanceError, BinanceErrorKind, BinanceResult};
 use crate::parse::{deserialize_strict, validate_unique_nested_string_ids};
 use crate::value::options::*;
 
+fn validate_unique_symbol_scoped_ids(
+    input: &str,
+    id_field: &str,
+    label: &str,
+) -> BinanceResult<()> {
+    let raw: serde_json::Value = deserialize_strict(input)?;
+    let rows = raw.as_array().ok_or_else(|| {
+        BinanceError::new(BinanceErrorKind::SchemaMismatch, "期权成交响应必须是数组")
+    })?;
+    let mut identities = HashSet::new();
+    for row in rows {
+        let object = row.as_object().ok_or_else(|| {
+            BinanceError::new(BinanceErrorKind::SchemaMismatch, "期权成交项必须是对象")
+        })?;
+        let symbol = match object.get("symbol") {
+            None => {
+                return Err(BinanceError::new(
+                    BinanceErrorKind::Missing,
+                    format!("{label} 缺少本地身份字段 symbol"),
+                ));
+            }
+            Some(serde_json::Value::String(symbol)) if !symbol.trim().is_empty() => symbol,
+            Some(serde_json::Value::Null) => {
+                return Err(BinanceError::new(
+                    BinanceErrorKind::SchemaMismatch,
+                    format!("{label} 本地身份字段 symbol 不得为 null"),
+                ));
+            }
+            Some(_) => {
+                return Err(BinanceError::new(
+                    BinanceErrorKind::SchemaMismatch,
+                    format!("{label} 本地身份字段 symbol 必须为非空字符串"),
+                ));
+            }
+        };
+        let id = match object.get(id_field) {
+            None => {
+                return Err(BinanceError::new(
+                    BinanceErrorKind::Missing,
+                    format!("{label} 缺少本地身份字段 {id_field}"),
+                ));
+            }
+            Some(serde_json::Value::Number(id)) => id.as_i64().ok_or_else(|| {
+                BinanceError::new(
+                    BinanceErrorKind::SchemaMismatch,
+                    format!("{label} 本地身份字段 {id_field} 必须为 int64"),
+                )
+            })?,
+            Some(serde_json::Value::Null) => {
+                return Err(BinanceError::new(
+                    BinanceErrorKind::SchemaMismatch,
+                    format!("{label} 本地身份字段 {id_field} 不得为 null"),
+                ));
+            }
+            Some(_) => {
+                return Err(BinanceError::new(
+                    BinanceErrorKind::SchemaMismatch,
+                    format!("{label} 本地身份字段 {id_field} 必须为 int64"),
+                ));
+            }
+        };
+        if !identities.insert((symbol, id)) {
+            return Err(BinanceError::new(
+                BinanceErrorKind::IdentityConflict,
+                format!("{label} 同一 symbol 内存在重复 {id_field}"),
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// 解析 `OptionsExchangeInfo` 冻结响应。
 ///
 /// # Errors
@@ -85,18 +156,26 @@ pub fn parse_options_mark(input: &str) -> BinanceResult<OptionsMark> {
 ///
 /// # Errors
 ///
+/// 本地身份字段 `symbol+id` 缺失返回 `Missing`，null 或空 symbol 返回
+/// `SchemaMismatch`；同一响应批内重复组合返回 `IdentityConflict`。此规则不表示源方保证唯一性。
 /// 未知字段返回 `UnknownField`；JSON、字段类型或根形态错误返回 `Invalid`。
 pub fn parse_options_block_trade(input: &str) -> BinanceResult<OptionsBlockTrade> {
-    crate::parse::deserialize_strict(input)
+    let response: OptionsBlockTrade = crate::parse::deserialize_strict(input)?;
+    validate_unique_symbol_scoped_ids(input, "id", "期权大宗成交")?;
+    Ok(response)
 }
 
 /// 解析 `OptionsTrade` 冻结响应。
 ///
 /// # Errors
 ///
+/// 本地身份字段 `symbol+tradeId` 缺失返回 `Missing`，null 或空 symbol 返回
+/// `SchemaMismatch`；同一响应批内重复组合返回 `IdentityConflict`。此规则不表示源方保证唯一性。
 /// 未知字段返回 `UnknownField`；JSON、字段类型或根形态错误返回 `Invalid`。
 pub fn parse_options_trade(input: &str) -> BinanceResult<OptionsTrade> {
-    crate::parse::deserialize_strict(input)
+    let response: OptionsTrade = crate::parse::deserialize_strict(input)?;
+    validate_unique_symbol_scoped_ids(input, "tradeId", "期权成交")?;
+    Ok(response)
 }
 
 /// 解析 `OptionsTicker` 冻结响应。

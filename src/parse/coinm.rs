@@ -7,6 +7,7 @@
 use crate::error::BinanceResult;
 use crate::parse::{
     deserialize_strict, validate_unique_nested_string_ids, validate_unique_response_ids,
+    validate_unique_response_string_ids, validate_unique_response_string_keys_and_times,
 };
 use crate::value::coinm::*;
 
@@ -132,7 +133,14 @@ pub fn parse_coinm_premium_index_kline(input: &str) -> BinanceResult<CoinmPremiu
 ///
 /// 未知字段返回 `UnknownField`；非法 JSON 或响应形状返回 `Invalid`。
 pub fn parse_coinm_funding_rate(input: &str) -> BinanceResult<CoinmFundingRate> {
-    crate::parse::deserialize_strict(input)
+    let response: CoinmFundingRate = crate::parse::deserialize_strict(input)?;
+    crate::parse::validate_unique_response_funding_rate_ids(
+        input,
+        response
+            .iter()
+            .map(|item| (item.symbol.clone(), item.funding_time, None)),
+    )?;
+    Ok(response)
 }
 
 /// 解析 `CoinmFundingInfo` 的完整响应。
@@ -141,7 +149,14 @@ pub fn parse_coinm_funding_rate(input: &str) -> BinanceResult<CoinmFundingRate> 
 ///
 /// 未知字段返回 `UnknownField`；非法 JSON 或响应形状返回 `Invalid`。
 pub fn parse_coinm_funding_info(input: &str) -> BinanceResult<CoinmFundingInfo> {
-    crate::parse::deserialize_strict(input)
+    let response: CoinmFundingInfo = deserialize_strict(input)?;
+    validate_unique_response_string_ids(
+        input,
+        response.iter().map(|item| item.symbol.clone()),
+        "symbol",
+        "COIN-M 资金费率配置",
+    )?;
+    Ok(response)
 }
 
 /// 解析 `CoinmOpenInterest` 的完整响应。
@@ -159,7 +174,20 @@ pub fn parse_coinm_open_interest(input: &str) -> BinanceResult<CoinmOpenInterest
 ///
 /// 未知字段返回 `UnknownField`；非法 JSON 或响应形状返回 `Invalid`。
 pub fn parse_coinm_open_interest_hist(input: &str) -> BinanceResult<CoinmOpenInterestHist> {
-    crate::parse::deserialize_strict(input)
+    let response: CoinmOpenInterestHist = deserialize_strict(input)?;
+    validate_unique_response_string_keys_and_times(
+        input,
+        response.iter().map(|item| {
+            (
+                vec![item.pair.clone(), item.contract_type.clone()],
+                item.timestamp,
+            )
+        }),
+        &["pair", "contractType"],
+        "timestamp",
+        "COIN-M 持仓量历史",
+    )?;
+    Ok(response)
 }
 
 /// 解析 `CoinmBookTicker` 的完整响应。

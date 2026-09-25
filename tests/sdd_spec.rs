@@ -216,9 +216,11 @@ fn variant_two_array_responses_parse_object_items() {
         ("BN-SPOT-REST-014", r#"[{"symbol":"SYNTH"}]"#, |raw| {
             parse_spot_book_ticker(raw).is_ok()
         }),
-        ("BN-SPOT-REST-015", r#"[{"symbol":"SYNTH"}]"#, |raw| {
-            parse_spot_ticker_price(raw).is_ok()
-        }),
+        (
+            "BN-SPOT-REST-015",
+            r#"[{"symbol":"SYNTH","price":"1.00"}]"#,
+            |raw| parse_spot_ticker_price(raw).is_ok(),
+        ),
         ("BN-SPOT-REST-016", r#"[{"symbol":"SYNTH"}]"#, |raw| {
             parse_spot_trading_day(raw).is_ok()
         }),

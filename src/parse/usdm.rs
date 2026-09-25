@@ -2,7 +2,11 @@
 //!
 //! forms 入口先确定 JSON 根形态，再反序列化具体结构，以保留未知字段错误类别。
 
-use super::{deserialize_strict, validate_unique_nested_string_ids, validate_unique_response_ids};
+use super::{
+    deserialize_strict, validate_unique_nested_string_ids,
+    validate_unique_response_funding_rate_ids, validate_unique_response_ids,
+    validate_unique_response_string_ids, validate_unique_response_string_keys_and_times,
+};
 use crate::error::{BinanceError, BinanceErrorKind, BinanceResult};
 use crate::value::usdm::*;
 
@@ -153,8 +157,21 @@ pub fn parse_usdm_premium_index_kline(input: &str) -> BinanceResult<UsdmPremiumI
 ///
 /// 未知字段返回 UnknownField；非法 JSON 返回 Invalid。
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
+/// 本地要求 `symbol` 与 `fundingTime`，缺失返回 Missing，null 或空白 symbol 返回 SchemaMismatch；
+/// `rateType` 可缺省，用于区分常规与特殊费率；同批重复三元组返回 IdentityConflict。
 pub fn parse_usdm_funding_rate(input: &str) -> BinanceResult<UsdmFundingRate> {
-    deserialize_strict(input)
+    let response: UsdmFundingRate = deserialize_strict(input)?;
+    validate_unique_response_funding_rate_ids(
+        input,
+        response.iter().map(|item| {
+            (
+                item.symbol.clone(),
+                item.funding_time,
+                item.rate_type.clone(),
+            )
+        }),
+    )?;
+    Ok(response)
 }
 
 /// 离线解析 UsdmFundingInfo 的冻结响应结构。
@@ -164,7 +181,14 @@ pub fn parse_usdm_funding_rate(input: &str) -> BinanceResult<UsdmFundingRate> {
 /// 未知字段返回 UnknownField；非法 JSON 返回 Invalid。
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
 pub fn parse_usdm_funding_info(input: &str) -> BinanceResult<UsdmFundingInfo> {
-    deserialize_strict(input)
+    let response: UsdmFundingInfo = deserialize_strict(input)?;
+    validate_unique_response_string_ids(
+        input,
+        response.iter().map(|item| item.symbol.clone()),
+        "symbol",
+        "USDM 资金费率配置",
+    )?;
+    Ok(response)
 }
 
 /// 离线解析 UsdmOpenInterest 的冻结响应结构。
@@ -174,7 +198,20 @@ pub fn parse_usdm_funding_info(input: &str) -> BinanceResult<UsdmFundingInfo> {
 /// 未知字段返回 UnknownField；非法 JSON 返回 Invalid。
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
 pub fn parse_usdm_open_interest(input: &str) -> BinanceResult<UsdmOpenInterest> {
-    deserialize_strict(input)
+    let response: UsdmOpenInterest = deserialize_strict(input)?;
+    super::require_non_null_field(input, "symbol")?;
+    super::require_non_null_field(input, "time")?;
+    if response
+        .symbol
+        .as_deref()
+        .is_some_and(|symbol| symbol.trim().is_empty())
+    {
+        return Err(BinanceError::new(
+            BinanceErrorKind::SchemaMismatch,
+            "USDM 未平仓量响应本地关键字段 symbol 不得为空",
+        ));
+    }
+    Ok(response)
 }
 
 /// 离线解析 UsdmOpenInterestHist 的冻结响应结构。
@@ -184,7 +221,17 @@ pub fn parse_usdm_open_interest(input: &str) -> BinanceResult<UsdmOpenInterest> 
 /// 未知字段返回 UnknownField；非法 JSON 返回 Invalid。
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
 pub fn parse_usdm_open_interest_hist(input: &str) -> BinanceResult<UsdmOpenInterestHist> {
-    deserialize_strict(input)
+    let response: UsdmOpenInterestHist = deserialize_strict(input)?;
+    validate_unique_response_string_keys_and_times(
+        input,
+        response
+            .iter()
+            .map(|item| (vec![item.symbol.clone()], item.timestamp)),
+        &["symbol"],
+        "timestamp",
+        "USDM 持仓量历史",
+    )?;
+    Ok(response)
 }
 
 /// 离线解析 UsdmBookSnapshot 的冻结响应结构。

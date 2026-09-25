@@ -90,6 +90,207 @@ pub(crate) fn validate_unique_response_ids(
     Ok(())
 }
 
+/// 校验资金费率本地身份 `symbol + fundingTime + rateType` 的批内唯一性。
+pub(crate) fn validate_unique_response_funding_rate_ids(
+    input: &str,
+    items: impl IntoIterator<Item = (Option<String>, Option<i64>, Option<String>)>,
+) -> BinanceResult<()> {
+    let raw: serde_json::Value = serde_json::from_str(input).map_err(classify_error)?;
+    let rows = raw.as_array().ok_or_else(|| {
+        BinanceError::new(BinanceErrorKind::SchemaMismatch, "资金费率响应必须是数组")
+    })?;
+    let mut seen = std::collections::HashSet::new();
+    for ((symbol, funding_time, rate_type), row) in items.into_iter().zip(rows) {
+        let row = row.as_object().ok_or_else(|| {
+            BinanceError::new(BinanceErrorKind::SchemaMismatch, "资金费率元素必须是对象")
+        })?;
+        let symbol = match row.get("symbol") {
+            None => {
+                return Err(BinanceError::new(
+                    BinanceErrorKind::Missing,
+                    "资金费率缺少本地关键字段 symbol",
+                ));
+            }
+            Some(serde_json::Value::Null) => {
+                return Err(BinanceError::new(
+                    BinanceErrorKind::SchemaMismatch,
+                    "资金费率本地关键字段 symbol 不得为 null",
+                ));
+            }
+            Some(_) => symbol.ok_or_else(|| {
+                BinanceError::new(
+                    BinanceErrorKind::SchemaMismatch,
+                    "资金费率本地关键字段 symbol 无法读取",
+                )
+            })?,
+        };
+        if symbol.trim().is_empty() {
+            return Err(BinanceError::new(
+                BinanceErrorKind::SchemaMismatch,
+                "资金费率本地关键字段 symbol 不得为空",
+            ));
+        }
+        let funding_time = match row.get("fundingTime") {
+            None => {
+                return Err(BinanceError::new(
+                    BinanceErrorKind::Missing,
+                    "资金费率缺少本地关键字段 fundingTime",
+                ));
+            }
+            Some(serde_json::Value::Null) => {
+                return Err(BinanceError::new(
+                    BinanceErrorKind::SchemaMismatch,
+                    "资金费率本地关键字段 fundingTime 不得为 null",
+                ));
+            }
+            Some(_) => funding_time.ok_or_else(|| {
+                BinanceError::new(
+                    BinanceErrorKind::SchemaMismatch,
+                    "资金费率本地关键字段 fundingTime 无法读取",
+                )
+            })?,
+        };
+        if !seen.insert((symbol, funding_time, rate_type)) {
+            return Err(BinanceError::new(
+                BinanceErrorKind::IdentityConflict,
+                "资金费率响应存在重复 symbol + fundingTime + rateType",
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// 校验响应数组中的本地字符串身份字段非空且批内唯一。
+pub(crate) fn validate_unique_response_string_ids(
+    input: &str,
+    ids: impl IntoIterator<Item = Option<String>>,
+    field: &str,
+    label: &str,
+) -> BinanceResult<()> {
+    let raw: serde_json::Value = serde_json::from_str(input).map_err(classify_error)?;
+    let items = raw.as_array().ok_or_else(|| {
+        BinanceError::new(
+            BinanceErrorKind::SchemaMismatch,
+            format!("{label}响应必须是数组"),
+        )
+    })?;
+    let mut seen = std::collections::HashSet::new();
+    for (id, raw_item) in ids.into_iter().zip(items) {
+        match raw_item.get(field) {
+            None => {
+                return Err(BinanceError::new(
+                    BinanceErrorKind::Missing,
+                    format!("{label}缺少本地关键字段 {field}"),
+                ));
+            }
+            Some(serde_json::Value::Null) => {
+                return Err(BinanceError::new(
+                    BinanceErrorKind::SchemaMismatch,
+                    format!("{label}本地关键字段 {field} 不得为 null"),
+                ));
+            }
+            Some(_) => {}
+        }
+        let id = id.ok_or_else(|| {
+            BinanceError::new(
+                BinanceErrorKind::SchemaMismatch,
+                format!("{label}本地关键字段 {field} 无法读取"),
+            )
+        })?;
+        if id.trim().is_empty() {
+            return Err(BinanceError::new(
+                BinanceErrorKind::SchemaMismatch,
+                format!("{label}本地关键字段 {field} 不得为空"),
+            ));
+        }
+        if !seen.insert(id) {
+            return Err(BinanceError::new(
+                BinanceErrorKind::IdentityConflict,
+                format!("{label}响应批内存在重复标识字段 {field}"),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// 校验响应数组中若干字符串字段与时间字段组成的本地批内身份。
+pub(crate) fn validate_unique_response_string_keys_and_times(
+    input: &str,
+    keys_and_times: impl IntoIterator<Item = (Vec<Option<String>>, Option<i64>)>,
+    key_fields: &[&str],
+    time_field: &str,
+    label: &str,
+) -> BinanceResult<()> {
+    let raw: serde_json::Value = serde_json::from_str(input).map_err(classify_error)?;
+    let rows = raw.as_array().ok_or_else(|| {
+        BinanceError::new(
+            BinanceErrorKind::SchemaMismatch,
+            format!("{label}响应必须是数组"),
+        )
+    })?;
+    let mut seen = std::collections::HashSet::new();
+    for ((keys, time), row) in keys_and_times.into_iter().zip(rows) {
+        let mut identity = Vec::with_capacity(key_fields.len());
+        for (field, key) in key_fields.iter().zip(keys) {
+            match row.get(field) {
+                None => {
+                    return Err(BinanceError::new(
+                        BinanceErrorKind::Missing,
+                        format!("{label}缺少本地关键字段 {field}"),
+                    ));
+                }
+                Some(serde_json::Value::Null) => {
+                    return Err(BinanceError::new(
+                        BinanceErrorKind::SchemaMismatch,
+                        format!("{label}本地关键字段 {field} 不得为 null"),
+                    ));
+                }
+                Some(_) => {}
+            }
+            let key = key.ok_or_else(|| {
+                BinanceError::new(
+                    BinanceErrorKind::SchemaMismatch,
+                    format!("{label}本地关键字段 {field} 无法读取"),
+                )
+            })?;
+            if key.trim().is_empty() {
+                return Err(BinanceError::new(
+                    BinanceErrorKind::SchemaMismatch,
+                    format!("{label}本地关键字段 {field} 不得为空"),
+                ));
+            }
+            identity.push(key);
+        }
+        let time = match row.get(time_field) {
+            None => {
+                return Err(BinanceError::new(
+                    BinanceErrorKind::Missing,
+                    format!("{label}缺少本地关键字段 {time_field}"),
+                ));
+            }
+            Some(serde_json::Value::Null) => {
+                return Err(BinanceError::new(
+                    BinanceErrorKind::SchemaMismatch,
+                    format!("{label}本地关键字段 {time_field} 不得为 null"),
+                ));
+            }
+            Some(_) => time.ok_or_else(|| {
+                BinanceError::new(
+                    BinanceErrorKind::SchemaMismatch,
+                    format!("{label}本地关键字段 {time_field} 无法读取"),
+                )
+            })?,
+        };
+        if !seen.insert((identity, time)) {
+            return Err(BinanceError::new(
+                BinanceErrorKind::IdentityConflict,
+                format!("{label}响应批内存在重复字符串字段与时间组合"),
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// 校验存在的嵌套数组中，本地要求的字符串身份字段非空且唯一。
 ///
 /// 调用方先用具体类型执行 `deserialize_strict`；字段集合缺失时不强制数组存在。
@@ -636,8 +837,8 @@ mod tests {
                 .kind(),
             BinanceErrorKind::UnknownField
         );
-        assert!(spot::parse_spot_ticker_price(r#"{"symbol":"BTCUSDT"}"#).is_ok());
-        assert!(spot::parse_spot_ticker_price(r#"[{"symbol":"BTCUSDT"}]"#).is_ok());
+        assert!(spot::parse_spot_ticker_price(r#"{"symbol":"BTCUSDT","price":"1.00"}"#).is_ok());
+        assert!(spot::parse_spot_ticker_price(r#"[{"symbol":"BTCUSDT","price":"1.00"}]"#).is_ok());
         assert!(spot::parse_spot_ticker_price("[[null,null]]").is_err());
         assert!(spot::parse_spot_kline(r#"[[1,"1","1","1","1","1",2,"1",3,"1","1","0"]]"#).is_ok());
         assert!(

@@ -6,12 +6,12 @@
 // TDD-PROBE: parse::spot::parse_spot_agg_trade | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
 // TDD-PROBE: parse::spot::parse_spot_avg_price | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
 // TDD-PROBE: parse::spot::parse_spot_trade | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
-// TDD-PROBE: parse::spot::parse_spot_block_trade | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
+// TDD-PROBE: parse::spot::parse_spot_block_trade | 变异：放行缺失或批内重复 id | 红=spot_block_trade_requires_unique_local_ids_per_response | 绿=spot_block_trade_requires_unique_local_ids_per_response
 // TDD-PROBE: parse::spot::parse_spot_kline | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
 // TDD-PROBE: parse::spot::parse_spot_ui_kline | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
 // TDD-PROBE: parse::spot::parse_spot_ticker | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
 // TDD-PROBE: parse::spot::parse_spot_ticker24hr | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
-// TDD-PROBE: parse::spot::parse_spot_ticker_price | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
+// TDD-PROBE: parse::spot::parse_spot_ticker_price | 变异：放行缺失 symbol/price、重复 symbol 或非法 price | 红=spot_ticker_price_requires_symbol_and_price_for_each_item | 绿=spot_ticker_price_requires_symbol_and_price_for_each_item
 // TDD-PROBE: parse::spot::parse_spot_book_ticker | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
 // TDD-PROBE: parse::spot::parse_spot_book_snapshot | 变异：误拒 tuple 深度或放行未知字段 | 红=spot_public_parsers | 绿=spot_public_parsers
 // TDD-PROBE: parse::spot::parse_spot_trading_day | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
@@ -27,10 +27,10 @@
 // TDD-PROBE: parse::usdm::parse_usdm_mark_price_kline | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
 // TDD-PROBE: parse::usdm::parse_usdm_premium_index | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
 // TDD-PROBE: parse::usdm::parse_usdm_premium_index_kline | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
-// TDD-PROBE: parse::usdm::parse_usdm_funding_rate | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
-// TDD-PROBE: parse::usdm::parse_usdm_funding_info | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
-// TDD-PROBE: parse::usdm::parse_usdm_open_interest | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
-// TDD-PROBE: parse::usdm::parse_usdm_open_interest_hist | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
+// TDD-PROBE: parse::usdm::parse_usdm_funding_rate | 变异：放行缺失 symbol/fundingTime 或重复身份三元组 | 红=usdm_funding_rate_requires_unique_local_identities_per_response | 绿=usdm_funding_rate_requires_unique_local_identities_per_response
+// TDD-PROBE: parse::usdm::parse_usdm_funding_info | 变异：放行缺失或批内重复 symbol | 红=usdm_funding_info_requires_unique_local_symbols_per_response | 绿=usdm_funding_info_requires_unique_local_symbols_per_response
+// TDD-PROBE: parse::usdm::parse_usdm_open_interest | 变异：放行缺失／空白 symbol 或缺失 time | 红=usdm_open_interest_requires_local_symbol_and_time | 绿=usdm_open_interest_requires_local_symbol_and_time
+// TDD-PROBE: parse::usdm::parse_usdm_open_interest_hist | 变异：放行缺失 symbol/timestamp 或重复组合 | 红=usdm_open_interest_hist_requires_unique_local_symbol_times_per_response | 绿=usdm_open_interest_hist_requires_unique_local_symbol_times_per_response
 // TDD-PROBE: parse::usdm::parse_usdm_book_snapshot | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
 // TDD-PROBE: parse::usdm::parse_usdm_book_ticker | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
 // TDD-PROBE: parse::usdm::parse_usdm_ticker_price | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
@@ -56,10 +56,10 @@
 // TDD-PROBE: parse::coinm::parse_coinm_mark_price_kline | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
 // TDD-PROBE: parse::coinm::parse_coinm_premium_index | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
 // TDD-PROBE: parse::coinm::parse_coinm_premium_index_kline | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
-// TDD-PROBE: parse::coinm::parse_coinm_funding_rate | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
-// TDD-PROBE: parse::coinm::parse_coinm_funding_info | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
+// TDD-PROBE: parse::coinm::parse_coinm_funding_rate | 变异：放行缺失 symbol/fundingTime 或批内重复组合 | 红=coinm_funding_rate_requires_unique_local_symbol_times_per_response | 绿=coinm_funding_rate_requires_unique_local_symbol_times_per_response
+// TDD-PROBE: parse::coinm::parse_coinm_funding_info | 变异：放行缺失或批内重复 symbol | 红=coinm_funding_info_requires_unique_local_symbols_per_response | 绿=coinm_funding_info_requires_unique_local_symbols_per_response
 // TDD-PROBE: parse::coinm::parse_coinm_open_interest | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
-// TDD-PROBE: parse::coinm::parse_coinm_open_interest_hist | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
+// TDD-PROBE: parse::coinm::parse_coinm_open_interest_hist | 变异：放行缺失 pair/contractType/timestamp 或重复组合 | 红=coinm_open_interest_hist_requires_unique_local_pair_type_times_per_response | 绿=coinm_open_interest_hist_requires_unique_local_pair_type_times_per_response
 // TDD-PROBE: parse::coinm::parse_coinm_book_ticker | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
 // TDD-PROBE: parse::coinm::parse_coinm_book_snapshot | 变异：误拒 tuple 深度或放行未知字段 | 红=coinm_public_parsers | 绿=coinm_public_parsers
 // TDD-PROBE: parse::coinm::parse_coinm_ticker_price | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
@@ -76,8 +76,8 @@
 // TDD-PROBE: parse::options::parse_options_kline | 变异：绕过结构校验或误拒合法响应 | 红=options_public_parsers | 绿=options_public_parsers
 // TDD-PROBE: parse::options::parse_options_open_interest | 变异：绕过结构校验或误拒合法响应 | 红=options_public_parsers | 绿=options_public_parsers
 // TDD-PROBE: parse::options::parse_options_mark | 变异：绕过结构校验或误拒合法响应 | 红=options_public_parsers | 绿=options_public_parsers
-// TDD-PROBE: parse::options::parse_options_block_trade | 变异：绕过结构校验或误拒合法响应 | 红=options_public_parsers | 绿=options_public_parsers
-// TDD-PROBE: parse::options::parse_options_trade | 变异：绕过结构校验或误拒合法响应 | 红=options_public_parsers | 绿=options_public_parsers
+// TDD-PROBE: parse::options::parse_options_block_trade | 变异：放行缺失或同 symbol 内重复 id | 红=options_block_trade_uses_symbol_scoped_id | 绿=options_block_trade_uses_symbol_scoped_id
+// TDD-PROBE: parse::options::parse_options_trade | 变异：放行缺失或同 symbol 内重复 tradeId | 红=options_trade_uses_symbol_scoped_trade_id | 绿=options_trade_uses_symbol_scoped_trade_id
 // TDD-PROBE: parse::options::parse_options_ticker | 变异：绕过结构校验或误拒合法响应 | 红=options_public_parsers | 绿=options_public_parsers
 // TDD-PROBE: parse::options::parse_options_book_snapshot | 变异：误拒 tuple 深度或放行未知字段 | 红=options_public_parsers | 绿=options_public_parsers
 // TDD-PROBE: parse::parse_exchange_info | 变异：快照哈希恒空 | 红=whitelist_snapshot_preserves_provenance | 绿=whitelist_snapshot_preserves_provenance
@@ -192,7 +192,7 @@ fn spot_public_parsers() {
     );
     probe!(parse_spot_ticker, r#"{"symbol":"1"}"#);
     probe!(parse_spot_ticker24hr, r#"{"symbol":"1"}"#);
-    probe!(parse_spot_ticker_price, r#"{"symbol":"1"}"#);
+    probe!(parse_spot_ticker_price, r#"{"symbol":"1","price":"1.00"}"#);
     probe!(parse_spot_book_ticker, r#"{"symbol":"1"}"#);
     probe!(
         parse_spot_book_snapshot,
@@ -233,10 +233,19 @@ fn usdm_public_parsers() {
         parse_usdm_premium_index_kline,
         r#"[[1,"1","1","1","1","1",1,"1",1,"1","1","1"]]"#
     );
-    probe!(parse_usdm_funding_rate, r#"[{"symbol":"1"}]"#);
-    probe!(parse_usdm_funding_info, r#"[{"symbol":"1"}]"#);
-    probe!(parse_usdm_open_interest, r#"{"openInterest":"1"}"#);
-    probe!(parse_usdm_open_interest_hist, r#"[{"symbol":"1"}]"#);
+    probe!(
+        parse_usdm_funding_rate,
+        r#"[{"symbol":"BTCUSDT","fundingTime":1,"rateType":"Regular"}]"#
+    );
+    probe!(parse_usdm_funding_info, r#"[{"symbol":"BLZUSDT"}]"#);
+    probe!(
+        parse_usdm_open_interest,
+        r#"{"openInterest":"1","symbol":"BTCUSDT","time":1}"#
+    );
+    probe!(
+        parse_usdm_open_interest_hist,
+        r#"[{"symbol":"BTCUSDT","timestamp":1}]"#
+    );
     probe!(parse_usdm_book_snapshot, r#"{"lastUpdateId":1}"#);
     probe!(parse_usdm_book_ticker, r#"{"symbol":"1"}"#);
     probe!(parse_usdm_ticker_price, r#"{"symbol":"1"}"#);
@@ -293,10 +302,16 @@ fn coinm_public_parsers() {
         parse_coinm_premium_index_kline,
         r#"[[1,"1","1","1","1","1",1,"1",1,"1","1","1"]]"#
     );
-    probe!(parse_coinm_funding_rate, r#"[{"symbol":"1"}]"#);
-    probe!(parse_coinm_funding_info, r#"[{"symbol":"1"}]"#);
+    probe!(
+        parse_coinm_funding_rate,
+        r#"[{"symbol":"BTCUSD_PERP","fundingTime":1}]"#
+    );
+    probe!(parse_coinm_funding_info, r#"[{"symbol":"BTCUSD_PERP"}]"#);
     probe!(parse_coinm_open_interest, r#"{"symbol":"1"}"#);
-    probe!(parse_coinm_open_interest_hist, r#"[{"pair":"1"}]"#);
+    probe!(
+        parse_coinm_open_interest_hist,
+        r#"[{"pair":"BTCUSD","contractType":"PERPETUAL","timestamp":1}]"#
+    );
     probe!(parse_coinm_book_ticker, r#"[{"lastUpdateId":1}]"#);
     probe!(
         parse_coinm_book_snapshot,
@@ -332,8 +347,8 @@ fn options_public_parsers() {
     );
     probe!(parse_options_open_interest, r#"[{"symbol":"1"}]"#);
     probe!(parse_options_mark, r#"[{"symbol":"1"}]"#);
-    probe!(parse_options_block_trade, r#"[{"id":1}]"#);
-    probe!(parse_options_trade, r#"[{"id":1}]"#);
+    probe!(parse_options_block_trade, r#"[{"symbol":"SYNTH","id":1}]"#);
+    probe!(parse_options_trade, r#"[{"symbol":"SYNTH","tradeId":1}]"#);
     probe!(parse_options_ticker, r#"[{"symbol":"1"}]"#);
     probe!(
         parse_options_book_snapshot,
@@ -400,7 +415,6 @@ fn forms_preserve_object_and_array_unknown_field_errors() {
     form!(
         parse_spot_ticker,
         parse_spot_ticker24hr,
-        parse_spot_ticker_price,
         parse_spot_book_ticker,
         parse_spot_trading_day,
         parse_usdm_premium_index,
@@ -409,6 +423,22 @@ fn forms_preserve_object_and_array_unknown_field_errors() {
         parse_usdm_ticker24hr,
         parse_usdm_asset_index,
         parse_usdm_adl_risk,
+    );
+    assert!(parse_spot_ticker_price(r#"{"symbol":"SYNTH","price":"1.00"}"#).is_ok());
+    assert!(parse_spot_ticker_price(r#"[{"symbol":"SYNTH","price":"1.00"}]"#).is_ok());
+    assert_eq!(
+        parse_spot_ticker_price(r#"{"symbol":"SYNTH","price":"1.00","newField":1}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
+    );
+    assert_eq!(
+        parse_spot_ticker_price(
+            r#"[{"symbol":"SYNTH","price":"1.00"},{"symbol":"SYNTH","price":"1.00","newField":1}]"#
+        )
+        .unwrap_err()
+        .kind(),
+        BinanceErrorKind::UnknownField
     );
     assert!(parse_usdm_insurance_balance(r#"{"symbols":["SYNTH"]}"#).is_ok());
     assert!(parse_usdm_insurance_balance(r#"[{"symbols":["SYNTH"]}]"#).is_ok());
@@ -623,6 +653,60 @@ fn average_price_requires_selected_key_fields() {
             BinanceErrorKind::Invalid
         );
     }
+}
+
+#[test]
+fn spot_ticker_price_requires_symbol_and_price_for_each_item() {
+    assert_eq!(
+        parse_spot_ticker_price(r#"{}"#).unwrap_err().kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    for raw in [
+        r#"{"symbol":"BTCUSDT"}"#,
+        r#"{"price":"1.00"}"#,
+        r#"{"symbol":null,"price":"1.00"}"#,
+        r#"{"symbol":"BTCUSDT","price":null}"#,
+        r#"{"symbol":"","price":"1.00"}"#,
+        r#"{"symbol":"BTCUSDT","price":"   "}"#,
+        r#"[{"symbol":"BTCUSDT","price":"1.00"},{"symbol":"ETHUSDT"}]"#,
+    ] {
+        assert_eq!(
+            parse_spot_ticker_price(raw).unwrap_err().kind(),
+            BinanceErrorKind::Missing,
+            "价格响应关键字段错误分类不符：{raw}"
+        );
+    }
+    assert!(parse_spot_ticker_price(
+        r#"[{"symbol":"BTCUSDT","price":"1.00"},{"symbol":"ETHUSDT","price":"2.00"}]"#
+    )
+    .is_ok());
+    assert!(parse_spot_ticker_price("[]").is_ok());
+    assert_eq!(
+        parse_spot_ticker_price(
+            r#"[{"symbol":"BTCUSDT","price":"1.00"},{"symbol":"BTCUSDT","price":"2.00"}]"#
+        )
+        .unwrap_err()
+        .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_spot_ticker_price(r#"{"symbol":"BTCUSDT","price":"not-a-price"}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Invalid
+    );
+    assert_eq!(
+        parse_spot_ticker_price(
+            r#"[{"symbol":"","price":"1.00"},{"symbol":"ETHUSDT","price":"2.00","newField":1}]"#
+        )
+        .unwrap_err()
+        .kind(),
+        BinanceErrorKind::UnknownField
+    );
+    assert_eq!(
+        parse_spot_ticker_price(r#"[null]"#).unwrap_err().kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
 }
 
 #[test]

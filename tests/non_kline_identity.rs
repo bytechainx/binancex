@@ -3,9 +3,16 @@
 #![allow(clippy::unwrap_used)]
 
 use binancex::parse::{
-    coinm::parse_coinm_agg_trade,
-    spot::{parse_spot_agg_trade, parse_spot_trade},
-    usdm::{parse_usdm_agg_trade, parse_usdm_trade},
+    coinm::{
+        parse_coinm_agg_trade, parse_coinm_funding_info, parse_coinm_funding_rate,
+        parse_coinm_open_interest_hist,
+    },
+    options::{parse_options_block_trade, parse_options_trade},
+    spot::{parse_spot_agg_trade, parse_spot_block_trade, parse_spot_trade},
+    usdm::{
+        parse_usdm_agg_trade, parse_usdm_funding_info, parse_usdm_funding_rate,
+        parse_usdm_open_interest, parse_usdm_open_interest_hist, parse_usdm_trade,
+    },
 };
 use binancex::BinanceErrorKind;
 
@@ -46,6 +53,131 @@ fn spot_trade_requires_unique_local_ids_per_response() {
     );
     assert_eq!(
         parse_spot_trade(r#"[{"id":null}]"#).unwrap_err().kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+}
+
+#[test]
+fn spot_block_trade_requires_unique_local_ids_per_response() {
+    assert!(parse_spot_block_trade("[]").unwrap().is_empty());
+    assert!(parse_spot_block_trade(r#"[{"id":1},{"id":2}]"#).is_ok());
+    assert_eq!(
+        parse_spot_block_trade(r#"[{"id":1},{"id":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_spot_block_trade(r#"[{"price":"1"}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_spot_block_trade(r#"[{"id":null}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+}
+
+#[test]
+fn options_trade_uses_symbol_scoped_trade_id() {
+    assert!(parse_options_trade("[]").unwrap().is_empty());
+    assert!(parse_options_trade(
+        r#"[{"symbol":"BTC-250725-1200-P","tradeId":1},{"symbol":"ETH-250725-1200-P","tradeId":1}]"#
+    )
+    .is_ok());
+    assert!(parse_options_trade(
+        r#"[{"symbol":"BTC-250725-1200-P","id":1,"tradeId":1},{"symbol":"BTC-250725-1200-P","id":2,"tradeId":2}]"#
+    )
+    .is_ok());
+    assert_eq!(
+        parse_options_trade(
+            r#"[{"symbol":"BTC-250725-1200-P","id":1,"tradeId":7},{"symbol":"BTC-250725-1200-P","id":2,"tradeId":7}]"#
+        )
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_options_trade(r#"[{"symbol":"BTC-250725-1200-P"}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_options_trade(r#"[{"tradeId":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_options_trade(r#"[{"symbol":"BTC-250725-1200-P","tradeId":null}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    for raw in [
+        r#"[{"symbol":null,"tradeId":1}]"#,
+        r#"[{"symbol":"","tradeId":1}]"#,
+    ] {
+        assert_eq!(
+            parse_options_trade(raw).unwrap_err().kind(),
+            BinanceErrorKind::SchemaMismatch
+        );
+    }
+    assert_eq!(
+        parse_options_trade(r#"[{"symbol":"BTC-250725-1200-P","tradeId":1,"id":null}]"#)
+            .unwrap()
+            .len(),
+        1
+    );
+}
+
+#[test]
+fn options_block_trade_uses_symbol_scoped_id() {
+    assert!(parse_options_block_trade("[]").unwrap().is_empty());
+    assert!(parse_options_block_trade(
+        r#"[{"symbol":"BTC-250725-1200-P","id":1},{"symbol":"ETH-250725-1200-P","id":1}]"#
+    )
+    .is_ok());
+    assert_eq!(
+        parse_options_block_trade(
+            r#"[{"symbol":"BTC-250725-1200-P","id":1,"tradeId":1},{"symbol":"BTC-250725-1200-P","id":1,"tradeId":2}]"#
+        )
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_options_block_trade(r#"[{"id":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_options_block_trade(r#"[{"symbol":"BTC-250725-1200-P"}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_options_block_trade(r#"[{"symbol":"BTC-250725-1200-P","id":null}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_options_block_trade(r#"[{"symbol":"","id":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_options_block_trade(r#"[{"symbol":null,"id":1}]"#)
+            .unwrap_err()
+            .kind(),
         BinanceErrorKind::SchemaMismatch
     );
 }
@@ -104,5 +236,352 @@ fn usdm_trade_requires_unique_local_ids_per_response() {
     assert_eq!(
         parse_usdm_trade(r#"[{"id":null}]"#).unwrap_err().kind(),
         BinanceErrorKind::SchemaMismatch
+    );
+}
+
+#[test]
+fn usdm_funding_rate_requires_unique_local_identities_per_response() {
+    assert!(parse_usdm_funding_rate(
+        r#"[{"symbol":"BTCUSDT","fundingTime":1},{"symbol":"ETHUSDT","fundingTime":1}]"#
+    )
+    .is_ok());
+    assert!(parse_usdm_funding_rate("[]").unwrap().is_empty());
+    assert_eq!(
+        parse_usdm_funding_rate(
+            r#"[{"symbol":"BTCUSDT","fundingTime":1},{"symbol":"BTCUSDT","fundingTime":2}]"#
+        )
+        .unwrap()
+        .len(),
+        2
+    );
+    assert_eq!(
+        parse_usdm_funding_rate(
+            r#"[{"symbol":"BTCUSDT","fundingTime":1},{"symbol":"BTCUSDT","fundingTime":1}]"#
+        )
+        .unwrap_err()
+        .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert!(parse_usdm_funding_rate(
+        r#"[{"symbol":"BTCUSDT","fundingTime":1,"rateType":"Regular"},{"symbol":"BTCUSDT","fundingTime":1,"rateType":"Special"}]"#
+    )
+    .is_ok());
+    assert_eq!(
+        parse_usdm_funding_rate(
+            r#"[{"symbol":"BTCUSDT","fundingTime":1,"rateType":"Regular"},{"symbol":"BTCUSDT","fundingTime":1,"rateType":"Regular"}]"#
+        )
+        .unwrap_err()
+        .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_usdm_funding_rate(
+            r#"[{"symbol":"BTCUSDT","fundingTime":1},{"symbol":"BTCUSDT","fundingTime":1,"rateType":null}]"#
+        )
+        .unwrap_err()
+        .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_usdm_funding_rate(r#"[{"fundingTime":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_usdm_funding_rate(r#"[{"symbol":"BTCUSDT"}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_usdm_funding_rate(r#"[{"symbol":null,"fundingTime":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_usdm_funding_rate(r#"[{"symbol":"BTCUSDT","fundingTime":null}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_usdm_funding_rate(r#"[{"symbol":" ","fundingTime":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_usdm_funding_rate(r#"[{"unexpected":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
+    );
+}
+
+#[test]
+fn coinm_funding_rate_requires_unique_local_symbol_times_per_response() {
+    assert!(parse_coinm_funding_rate(
+        r#"[{"symbol":"BTCUSD_PERP","fundingTime":1},{"symbol":"ETHUSD_PERP","fundingTime":1}]"#
+    )
+    .is_ok());
+    assert!(parse_coinm_funding_rate("[]").unwrap().is_empty());
+    assert_eq!(
+        parse_coinm_funding_rate(
+            r#"[{"symbol":"BTCUSD_PERP","fundingTime":1},{"symbol":"BTCUSD_PERP","fundingTime":1}]"#
+        )
+        .unwrap_err()
+        .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_coinm_funding_rate(r#"[{"fundingTime":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_coinm_funding_rate(r#"[{"symbol":"BTCUSD_PERP"}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_coinm_funding_rate(r#"[{"symbol":null,"fundingTime":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_coinm_funding_rate(r#"[{"symbol":" ","fundingTime":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_coinm_funding_rate(r#"[{"unexpected":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
+    );
+}
+
+#[test]
+fn usdm_funding_info_requires_unique_local_symbols_per_response() {
+    assert!(parse_usdm_funding_info(r#"[{"symbol":"BTCUSDT"},{"symbol":"ETHUSDT"}]"#).is_ok());
+    assert!(parse_usdm_funding_info("[]").unwrap().is_empty());
+    assert_eq!(
+        parse_usdm_funding_info(r#"[{"symbol":"BTCUSDT"},{"symbol":"BTCUSDT"}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_usdm_funding_info(r#"[{"adjustedFundingRateCap":"0.02"}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_usdm_funding_info(r#"[{"symbol":null}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_usdm_funding_info(r#"[{"symbol":" "}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_usdm_funding_info(r#"[{"unknown":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
+    );
+}
+
+#[test]
+fn coinm_funding_info_requires_unique_local_symbols_per_response() {
+    assert!(
+        parse_coinm_funding_info(r#"[{"symbol":"BTCUSD_PERP"},{"symbol":"ETHUSD_PERP"}]"#).is_ok()
+    );
+    assert!(parse_coinm_funding_info("[]").unwrap().is_empty());
+    assert_eq!(
+        parse_coinm_funding_info(r#"[{"symbol":"BTCUSD_PERP"},{"symbol":"BTCUSD_PERP"}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_coinm_funding_info(r#"[{"adjustedFundingRateCap":"0.02"}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_coinm_funding_info(r#"[{"symbol":null}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_coinm_funding_info(r#"[{"symbol":" "}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_coinm_funding_info(r#"[{"unknown":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
+    );
+}
+
+#[test]
+fn usdm_open_interest_hist_requires_unique_local_symbol_times_per_response() {
+    assert!(parse_usdm_open_interest_hist(
+        r#"[{"symbol":"BTCUSDT","timestamp":1},{"symbol":"ETHUSDT","timestamp":1}]"#
+    )
+    .is_ok());
+    assert!(parse_usdm_open_interest_hist("[]").unwrap().is_empty());
+    assert!(parse_usdm_open_interest_hist(
+        r#"[{"symbol":"BTCUSDT","timestamp":1},{"symbol":"BTCUSDT","timestamp":2}]"#
+    )
+    .is_ok());
+    assert_eq!(
+        parse_usdm_open_interest_hist(
+            r#"[{"symbol":"BTCUSDT","timestamp":1},{"symbol":"BTCUSDT","timestamp":1}]"#
+        )
+        .unwrap_err()
+        .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_usdm_open_interest_hist(r#"[{"timestamp":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_usdm_open_interest_hist(r#"[{"symbol":"BTCUSDT"}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_usdm_open_interest_hist(r#"[{"symbol":null,"timestamp":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_usdm_open_interest_hist(r#"[{"symbol":" ","timestamp":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_usdm_open_interest_hist(r#"[{"symbol":"BTCUSDT","timestamp":null}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_usdm_open_interest_hist(r#"[{"unknown":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
+    );
+}
+
+#[test]
+fn coinm_open_interest_hist_requires_unique_local_pair_type_times_per_response() {
+    assert!(parse_coinm_open_interest_hist(
+        r#"[{"pair":"BTCUSD","contractType":"PERPETUAL","timestamp":1},{"pair":"BTCUSD","contractType":"CURRENT_QUARTER","timestamp":1}]"#
+    )
+    .is_ok());
+    assert!(parse_coinm_open_interest_hist("[]").unwrap().is_empty());
+    assert_eq!(
+        parse_coinm_open_interest_hist(
+            r#"[{"pair":"BTCUSD","contractType":"PERPETUAL","timestamp":1},{"pair":"BTCUSD","contractType":"PERPETUAL","timestamp":1}]"#
+        )
+        .unwrap_err()
+        .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_coinm_open_interest_hist(r#"[{"contractType":"PERPETUAL","timestamp":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_coinm_open_interest_hist(r#"[{"pair":"BTCUSD","timestamp":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_coinm_open_interest_hist(r#"[{"pair":"BTCUSD","contractType":"PERPETUAL"}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_coinm_open_interest_hist(r#"[{"pair":"BTCUSD","contractType":null,"timestamp":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_coinm_open_interest_hist(
+            r#"[{"pair":" ","contractType":"PERPETUAL","timestamp":1}]"#
+        )
+        .unwrap_err()
+        .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_coinm_open_interest_hist(r#"[{"unknown":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
+    );
+}
+
+#[test]
+fn usdm_open_interest_requires_local_symbol_and_time() {
+    assert!(parse_usdm_open_interest(r#"{"symbol":"BTCUSDT","time":1}"#).is_ok());
+    assert_eq!(
+        parse_usdm_open_interest(r#"{"time":1}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_usdm_open_interest(r#"{"symbol":"BTCUSDT"}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    for input in [
+        r#"{"symbol":null,"time":1}"#,
+        r#"{"symbol":"  ","time":1}"#,
+        r#"{"symbol":"BTCUSDT","time":null}"#,
+    ] {
+        assert_eq!(
+            parse_usdm_open_interest(input).unwrap_err().kind(),
+            BinanceErrorKind::SchemaMismatch
+        );
+    }
+    assert_eq!(
+        parse_usdm_open_interest(r#"{"symbol":"BTCUSDT","time":1,"unknown":0}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
     );
 }

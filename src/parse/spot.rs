@@ -6,7 +6,10 @@ use crate::error::{BinanceError, BinanceErrorKind, BinanceResult};
 use crate::value::spot::*;
 use std::collections::HashSet;
 
-use super::{deserialize_strict, validate_unique_nested_string_ids, validate_unique_response_ids};
+use super::{
+    deserialize_strict, validate_unique_nested_string_ids, validate_unique_response_ids,
+    validate_unique_response_string_ids,
+};
 
 fn reject_explicit_nulls(input: &str) -> BinanceResult<()> {
     fn contains_null(value: &serde_json::Value) -> bool {
@@ -273,9 +276,17 @@ pub fn parse_spot_trade(input: &str) -> BinanceResult<SpotTrade> {
 
 /// 解析 `SpotBlockTrade` 的冻结响应结构。
 ///
-/// 缺少非必填字段时保留为空；未知字段或非法形态返回错误。
+/// 缺少本地关键字段 `id` 返回 `Missing`，显式 null 返回 `SchemaMismatch`；
+/// 同一响应批内重复 `id` 返回 `IdentityConflict`。此规则不表示源方保证唯一性。
 pub fn parse_spot_block_trade(input: &str) -> BinanceResult<SpotBlockTrade> {
-    deserialize_strict(input)
+    let response: SpotBlockTrade = deserialize_strict(input)?;
+    validate_unique_response_ids(
+        input,
+        response.iter().map(|item| item.id),
+        "id",
+        "现货大宗成交",
+    )?;
+    Ok(response)
 }
 
 /// 解析 `SpotKline` 的冻结响应结构。
@@ -324,13 +335,53 @@ pub fn parse_spot_ticker24hr(input: &str) -> BinanceResult<SpotTicker24hr> {
 
 /// 解析 `SpotTickerPrice` 的冻结响应结构。
 ///
-/// 缺少非必填字段时保留为空；未知字段或非法形态返回错误。
+/// `symbol` 和 `price` 是业务关键字段；缺失或空值、未知字段及非法形态均返回错误。
 pub fn parse_spot_ticker_price(input: &str) -> BinanceResult<SpotTickerPrice> {
     match input.trim_start().as_bytes().first() {
-        Some(b'{') => deserialize_strict(input).map(SpotTickerPrice::Object),
-        Some(b'[') => deserialize_strict(input).map(SpotTickerPrice::Array),
+        Some(b'{') => {
+            let item: Box<SpotTickerPriceItem> = deserialize_strict(input)?;
+            validate_spot_ticker_price_item(&item)?;
+            Ok(SpotTickerPrice::Object(item))
+        }
+        Some(b'[') => {
+            let items: Vec<SpotTickerPriceItem> = deserialize_strict(input)?;
+            for item in &items {
+                validate_spot_ticker_price_item(item)?;
+            }
+            validate_unique_response_string_ids(
+                input,
+                items.iter().map(|item| item.symbol.clone()),
+                "symbol",
+                "Spot ticker price",
+            )?;
+            Ok(SpotTickerPrice::Array(items))
+        }
         _ => deserialize_strict(input),
     }
+}
+
+fn validate_spot_ticker_price_item(item: &SpotTickerPriceItem) -> BinanceResult<()> {
+    if item
+        .symbol
+        .as_deref()
+        .map_or(true, |value| value.trim().is_empty())
+    {
+        return Err(BinanceError::new(
+            BinanceErrorKind::Missing,
+            "Spot Ticker Price 缺少非空 symbol",
+        ));
+    }
+    let price = item
+        .price
+        .as_deref()
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| {
+            BinanceError::new(
+                BinanceErrorKind::Missing,
+                "Spot Ticker Price 缺少非空 price",
+            )
+        })?;
+    crate::value::validate_decimal(price)
 }
 
 /// 解析 `SpotBookTicker` 的冻结响应结构。
