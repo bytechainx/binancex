@@ -5,7 +5,7 @@
 use binancex::parse::{
     coinm::parse_coinm_agg_trade,
     spot::{parse_spot_agg_trade, parse_spot_trade},
-    usdm::parse_usdm_agg_trade,
+    usdm::{parse_usdm_agg_trade, parse_usdm_trade},
 };
 use binancex::BinanceErrorKind;
 
@@ -84,6 +84,25 @@ fn coinm_aggregate_trade_requires_unique_local_ids_per_response() {
     );
     assert_eq!(
         parse_coinm_agg_trade(r#"[{"a":null}]"#).unwrap_err().kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+}
+
+#[test]
+fn usdm_trade_requires_unique_local_ids_per_response() {
+    assert!(parse_usdm_trade(r#"[{"id":1},{"id":2}]"#).is_ok());
+    assert_eq!(
+        parse_usdm_trade(r#"[{"id":1},{"id":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_usdm_trade(r#"[{"time":1}]"#).unwrap_err().kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_usdm_trade(r#"[{"id":null}]"#).unwrap_err().kind(),
         BinanceErrorKind::SchemaMismatch
     );
 }

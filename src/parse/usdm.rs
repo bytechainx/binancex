@@ -50,8 +50,16 @@ pub fn parse_usdm_agg_trade(input: &str) -> BinanceResult<UsdmAggTrade> {
 ///
 /// 未知字段返回 UnknownField；非法 JSON 返回 Invalid。
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
+/// 本地要求 `id`，同一响应批内缺失或重复分别返回 Missing 或 IdentityConflict。
 pub fn parse_usdm_trade(input: &str) -> BinanceResult<UsdmTrade> {
-    deserialize_strict(input)
+    let response: UsdmTrade = deserialize_strict(input)?;
+    validate_unique_response_ids(
+        input,
+        response.iter().map(|item| item.id),
+        "id",
+        "USDM 成交",
+    )?;
+    Ok(response)
 }
 
 /// 离线解析 UsdmContinuousKline 的冻结响应结构。
