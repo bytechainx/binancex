@@ -6,7 +6,7 @@ use crate::error::{BinanceError, BinanceErrorKind, BinanceResult};
 use crate::value::spot::*;
 use std::collections::HashSet;
 
-use super::deserialize_strict;
+use super::{deserialize_strict, validate_unique_response_ids};
 
 fn reject_explicit_nulls(input: &str) -> BinanceResult<()> {
     fn contains_null(value: &serde_json::Value) -> bool {
@@ -218,52 +218,6 @@ pub fn parse_spot_agg_trade(input: &str) -> BinanceResult<SpotAggTrade> {
     let response: SpotAggTrade = deserialize_strict(input)?;
     validate_unique_response_ids(input, response.iter().map(|item| item.a), "a", "聚合成交")?;
     Ok(response)
-}
-
-fn validate_unique_response_ids(
-    input: &str,
-    ids: impl IntoIterator<Item = Option<i64>>,
-    field: &str,
-    label: &str,
-) -> BinanceResult<()> {
-    let raw: serde_json::Value = serde_json::from_str(input).map_err(super::classify_error)?;
-    let items = raw.as_array().ok_or_else(|| {
-        BinanceError::new(
-            BinanceErrorKind::SchemaMismatch,
-            format!("{label}响应必须是数组"),
-        )
-    })?;
-    let mut seen = HashSet::new();
-    for (id, raw_item) in ids.into_iter().zip(items) {
-        match raw_item.get(field) {
-            None => {
-                return Err(BinanceError::new(
-                    BinanceErrorKind::Missing,
-                    format!("{label}缺少本地关键字段 {field}"),
-                ));
-            }
-            Some(serde_json::Value::Null) => {
-                return Err(BinanceError::new(
-                    BinanceErrorKind::SchemaMismatch,
-                    format!("{label}本地关键字段 {field} 不得为 null"),
-                ));
-            }
-            Some(_) => {}
-        }
-        let id = id.ok_or_else(|| {
-            BinanceError::new(
-                BinanceErrorKind::SchemaMismatch,
-                format!("{label}本地关键字段 {field} 无法读取"),
-            )
-        })?;
-        if !seen.insert(id) {
-            return Err(BinanceError::new(
-                BinanceErrorKind::IdentityConflict,
-                format!("{label}响应批内存在重复标识字段 {field}"),
-            ));
-        }
-    }
-    Ok(())
 }
 
 /// 解析 `SpotAvgPrice` 的冻结响应结构。

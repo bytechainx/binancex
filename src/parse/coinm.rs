@@ -5,6 +5,7 @@
 #![forbid(unsafe_code)]
 
 use crate::error::BinanceResult;
+use crate::parse::{deserialize_strict, validate_unique_response_ids};
 use crate::value::coinm::*;
 
 /// 解析 `CoinmExchangeInfo` 的完整响应。
@@ -21,8 +22,16 @@ pub fn parse_coinm_exchange_info(input: &str) -> BinanceResult<CoinmExchangeInfo
 /// # Errors
 ///
 /// 未知字段返回 `UnknownField`；非法 JSON 或响应形状返回 `Invalid`。
+/// 本地要求 `a`，同一响应批内缺失、null 或重复分别返回 Missing、SchemaMismatch 或 IdentityConflict。
 pub fn parse_coinm_agg_trade(input: &str) -> BinanceResult<CoinmAggTrade> {
-    crate::parse::deserialize_strict(input)
+    let response: CoinmAggTrade = deserialize_strict(input)?;
+    validate_unique_response_ids(
+        input,
+        response.iter().map(|item| item.a),
+        "a",
+        "COINM 聚合成交",
+    )?;
+    Ok(response)
 }
 
 /// 解析 `CoinmTrade` 的完整响应。
