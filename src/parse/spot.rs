@@ -212,9 +212,58 @@ pub fn parse_spot_execution_rules(input: &str) -> BinanceResult<SpotExecutionRul
 
 /// 解析 `SpotAggTrade` 的冻结响应结构。
 ///
-/// 缺少非必填字段时保留为空；未知字段或非法形态返回错误。
+/// 缺少本地关键字段 `a` 返回 Missing，显式 null 返回 SchemaMismatch；
+/// 同一响应批内重复 `a` 返回 IdentityConflict。此规则不表示源方保证唯一性。
 pub fn parse_spot_agg_trade(input: &str) -> BinanceResult<SpotAggTrade> {
-    deserialize_strict(input)
+    let response: SpotAggTrade = deserialize_strict(input)?;
+    validate_unique_response_ids(input, response.iter().map(|item| item.a), "a", "聚合成交")?;
+    Ok(response)
+}
+
+fn validate_unique_response_ids(
+    input: &str,
+    ids: impl IntoIterator<Item = Option<i64>>,
+    field: &str,
+    label: &str,
+) -> BinanceResult<()> {
+    let raw: serde_json::Value = serde_json::from_str(input).map_err(super::classify_error)?;
+    let items = raw.as_array().ok_or_else(|| {
+        BinanceError::new(
+            BinanceErrorKind::SchemaMismatch,
+            format!("{label}响应必须是数组"),
+        )
+    })?;
+    let mut seen = HashSet::new();
+    for (id, raw_item) in ids.into_iter().zip(items) {
+        match raw_item.get(field) {
+            None => {
+                return Err(BinanceError::new(
+                    BinanceErrorKind::Missing,
+                    format!("{label}缺少本地关键字段 {field}"),
+                ));
+            }
+            Some(serde_json::Value::Null) => {
+                return Err(BinanceError::new(
+                    BinanceErrorKind::SchemaMismatch,
+                    format!("{label}本地关键字段 {field} 不得为 null"),
+                ));
+            }
+            Some(_) => {}
+        }
+        let id = id.ok_or_else(|| {
+            BinanceError::new(
+                BinanceErrorKind::SchemaMismatch,
+                format!("{label}本地关键字段 {field} 无法读取"),
+            )
+        })?;
+        if !seen.insert(id) {
+            return Err(BinanceError::new(
+                BinanceErrorKind::IdentityConflict,
+                format!("{label}响应批内存在重复标识字段 {field}"),
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// 解析 `SpotAvgPrice` 的冻结响应结构。
@@ -249,9 +298,12 @@ pub fn parse_spot_avg_price(input: &str) -> BinanceResult<SpotAvgPrice> {
 
 /// 解析 `SpotTrade` 的冻结响应结构。
 ///
-/// 缺少非必填字段时保留为空；未知字段或非法形态返回错误。
+/// 缺少本地关键字段 `id` 返回 Missing，显式 null 返回 SchemaMismatch；
+/// 同一响应批内重复 `id` 返回 IdentityConflict。此规则不表示源方保证唯一性。
 pub fn parse_spot_trade(input: &str) -> BinanceResult<SpotTrade> {
-    deserialize_strict(input)
+    let response: SpotTrade = deserialize_strict(input)?;
+    validate_unique_response_ids(input, response.iter().map(|item| item.id), "id", "现货成交")?;
+    Ok(response)
 }
 
 /// 解析 `SpotBlockTrade` 的冻结响应结构。
