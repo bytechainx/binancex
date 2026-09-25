@@ -5,7 +5,9 @@
 
 #![forbid(unsafe_code)]
 
-use crate::value::numeric::Decimal;
+mod reference_price;
+
+pub use reference_price::{SpotReferencePrice, SpotReferencePriceCalculation};
 
 /// 冻结响应中的嵌套对象。
 #[doc(hidden)]
@@ -40,6 +42,15 @@ pub struct SpotExchangeInfoExchangeFiltersItem {
     /// 响应字段 `maxNumOrders`。
     #[serde(rename = "maxNumOrders")]
     pub max_num_orders: Option<i64>,
+    /// 响应字段 `maxNumAlgoOrders`。
+    #[serde(rename = "maxNumAlgoOrders")]
+    pub max_num_algo_orders: Option<i64>,
+    /// 响应字段 `maxNumIcebergOrders`。
+    #[serde(rename = "maxNumIcebergOrders")]
+    pub max_num_iceberg_orders: Option<i64>,
+    /// 响应字段 `maxNumOrderLists`。
+    #[serde(rename = "maxNumOrderLists")]
+    pub max_num_order_lists: Option<i64>,
 }
 
 /// 冻结响应中的嵌套对象。
@@ -62,6 +73,87 @@ pub struct SpotExchangeInfoSymbolsItemFiltersItem {
     /// 响应字段 `tickSize`。
     #[serde(rename = "tickSize")]
     pub tick_size: Option<String>,
+    /// 响应字段 `multiplierUp`。
+    #[serde(rename = "multiplierUp")]
+    pub multiplier_up: Option<String>,
+    /// 响应字段 `multiplierDown`。
+    #[serde(rename = "multiplierDown")]
+    pub multiplier_down: Option<String>,
+    /// 响应字段 `avgPriceMins`。
+    #[serde(rename = "avgPriceMins")]
+    pub avg_price_mins: Option<i64>,
+    /// 响应字段 `bidMultiplierUp`。
+    #[serde(rename = "bidMultiplierUp")]
+    pub bid_multiplier_up: Option<String>,
+    /// 响应字段 `bidMultiplierDown`。
+    #[serde(rename = "bidMultiplierDown")]
+    pub bid_multiplier_down: Option<String>,
+    /// 响应字段 `askMultiplierUp`。
+    #[serde(rename = "askMultiplierUp")]
+    pub ask_multiplier_up: Option<String>,
+    /// 响应字段 `askMultiplierDown`。
+    #[serde(rename = "askMultiplierDown")]
+    pub ask_multiplier_down: Option<String>,
+    /// 响应字段 `minQty`。
+    #[serde(rename = "minQty")]
+    pub min_qty: Option<String>,
+    /// 响应字段 `maxQty`。
+    #[serde(rename = "maxQty")]
+    pub max_qty: Option<String>,
+    /// 响应字段 `stepSize`。
+    #[serde(rename = "stepSize")]
+    pub step_size: Option<String>,
+    /// 响应字段 `minNotional`。
+    #[serde(rename = "minNotional")]
+    pub min_notional: Option<String>,
+    /// 响应字段 `maxNotional`。
+    #[serde(rename = "maxNotional")]
+    pub max_notional: Option<String>,
+    /// 响应字段 `applyToMarket`。
+    #[serde(rename = "applyToMarket")]
+    pub apply_to_market: Option<bool>,
+    /// 响应字段 `applyMinToMarket`。
+    #[serde(rename = "applyMinToMarket")]
+    pub apply_min_to_market: Option<bool>,
+    /// 响应字段 `applyMaxToMarket`。
+    #[serde(rename = "applyMaxToMarket")]
+    pub apply_max_to_market: Option<bool>,
+    /// 响应字段 `limit`。
+    #[serde(rename = "limit")]
+    pub limit: Option<i64>,
+    /// 响应字段 `maxNumOrders`。
+    #[serde(rename = "maxNumOrders")]
+    pub max_num_orders: Option<i64>,
+    /// 响应字段 `maxNumAlgoOrders`。
+    #[serde(rename = "maxNumAlgoOrders")]
+    pub max_num_algo_orders: Option<i64>,
+    /// 响应字段 `maxNumIcebergOrders`。
+    #[serde(rename = "maxNumIcebergOrders")]
+    pub max_num_iceberg_orders: Option<i64>,
+    /// 响应字段 `maxPosition`。
+    #[serde(rename = "maxPosition")]
+    pub max_position: Option<String>,
+    /// 响应字段 `minTrailingAboveDelta`。
+    #[serde(rename = "minTrailingAboveDelta")]
+    pub min_trailing_above_delta: Option<i64>,
+    /// 响应字段 `maxTrailingAboveDelta`。
+    #[serde(rename = "maxTrailingAboveDelta")]
+    pub max_trailing_above_delta: Option<i64>,
+    /// 响应字段 `minTrailingBelowDelta`。
+    #[serde(rename = "minTrailingBelowDelta")]
+    pub min_trailing_below_delta: Option<i64>,
+    /// 响应字段 `maxTrailingBelowDelta`。
+    #[serde(rename = "maxTrailingBelowDelta")]
+    pub max_trailing_below_delta: Option<i64>,
+    /// 响应字段 `maxNumOrderAmends`。
+    #[serde(rename = "maxNumOrderAmends")]
+    pub max_num_order_amends: Option<i64>,
+    /// 响应字段 `maxNumOrderLists`。
+    #[serde(rename = "maxNumOrderLists")]
+    pub max_num_order_lists: Option<i64>,
+    /// 响应字段 `endTime`。
+    #[serde(rename = "endTime")]
+    pub end_time: Option<i64>,
 }
 
 /// 冻结响应中的嵌套对象。
@@ -164,17 +256,8 @@ pub struct SpotExchangeInfoSorsItem {
 
 /// 对应冻结端点：BN-SPOT-REST-001。
 ///
-/// 待核实：symbols[].filters 为 union 形态（oneOf Decision Table 列 16 个 filterType 变体，仅 PRICE_FILTER 展开为 filterType+priceExponent+minPrice+maxPrice+tickSize）；各 filterType 的字段集归属待逐类型核实后拆分为 variants（参照 BN-USDM-REST-007 先例）
+/// 待核实：T_PLUS_SELL 的 OpenAPI 分支列出 `endTime`，但未约束判别值且允许其他已登记字段；分支字段集仍开放。
 ///
-/// 待核实：exchangeFilters 为 union 形态（oneOf Decision Table 列 EXCHANGE_MAX_NUM_ORDERS / EXCHANGE_MAX_NUM_ALGO_ORDERS / EXCHANGE_MAX_NUM_ICEBERG_ORDERS / EXCHANGE_MAX_NUM_ORDER_LISTS 4 个变体，仅 EXCHANGE_MAX_NUM_ORDERS 展开为 filterType+maxNumOrders）；其余变体字段名未在源展开
-///
-/// 待核实：count 归属 rateLimits 元素（字段表位置紧随 rateLimits 的 limit 之后；Example Responses 的 rateLimits 条目无 count 实例，层级按表序推断，待实例证实）
-///
-/// 待核实：permissionSets 表类型为 array[]（数组的数组）；内层元素类型按 Example Responses 实例（string）冻结
-///
-/// 待核实：timezone 归根对象（Example Responses JSON 实例路径证实）
-///
-/// 待核实：sors 为可选字段（源注明 Optional. Present only when SOR is available.），Example Responses 未含 sors 实例
 /// 冻结的 SpotExchangeInfo 响应对象。
 #[derive(Debug, Clone, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -356,39 +439,9 @@ pub struct SpotBlockTradeItem {
 /// 冻结的 SpotBlockTrade 响应集合。
 pub type SpotBlockTrade = Vec<SpotBlockTradeItem>;
 
-/// 对应冻结端点：BN-SPOT-REST-011。
-/// 冻结的 SpotKline 响应集合。
-pub type SpotKline = Vec<(
-    i64,
-    String,
-    String,
-    String,
-    String,
-    String,
-    i64,
-    String,
-    i64,
-    String,
-    String,
-    String,
-)>;
+crate::value::typed_kline!(SpotKline, "Spot K 线响应，来自 BN-SPOT-REST-011。");
 
-/// 对应冻结端点：BN-SPOT-REST-017。
-/// 冻结的 SpotUiKline 响应集合。
-pub type SpotUiKline = Vec<(
-    i64,
-    String,
-    String,
-    String,
-    String,
-    String,
-    i64,
-    String,
-    i64,
-    String,
-    String,
-    String,
-)>;
+crate::value::typed_kline!(SpotUiKline, "Spot UI K 线响应，来自 BN-SPOT-REST-017。");
 
 /// 冻结响应中的嵌套对象。
 #[doc(hidden)]
@@ -596,6 +649,21 @@ pub struct SpotBookTickerItem {
     pub ask_qty: Option<String>,
 }
 
+/// Spot 冻结深度快照响应类型 SpotBookSnapshot。
+#[derive(Debug, Clone, PartialEq, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SpotBookSnapshot {
+    /// 原始响应字段 lastUpdateId；未提供时为 None。
+    #[serde(rename = "lastUpdateId")]
+    pub last_update_id: Option<i64>,
+    /// 原始响应字段 bids；每档为价格与数量二元组。
+    #[serde(rename = "bids")]
+    pub bids: Option<Vec<(String, String)>>,
+    /// 原始响应字段 asks；每档为价格与数量二元组。
+    #[serde(rename = "asks")]
+    pub asks: Option<Vec<(String, String)>>,
+}
+
 /// 对应冻结端点：BN-SPOT-REST-014。
 ///
 /// 待核实：Variant 2（type=array）元素字段表未在渲染源单独列出（全文件无 Properties for Variant 2 段）；array 形 item 按 Variant 1 object 形状推断
@@ -678,44 +746,4 @@ pub enum SpotTradingDay {
     Object(Box<SpotTradingDayItem>),
     /// symbols 参数提供（多标的，至多 100）。
     Array(Vec<SpotTradingDayItem>),
-}
-
-/// 对应冻结端点：BN-SPOT-REST-018。
-/// 冻结的 SpotReferencePrice 响应对象。
-#[derive(Debug, Clone, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct SpotReferencePrice {
-    /// 响应字段 `symbol`。
-    #[serde(rename = "symbol")]
-    pub symbol: Option<String>,
-    /// 响应字段 `referencePrice`。
-    #[serde(rename = "referencePrice")]
-    pub reference_price: Option<Decimal>,
-    /// 响应字段 `timestamp`。
-    #[serde(rename = "timestamp")]
-    pub timestamp: Option<i64>,
-}
-
-/// 对应冻结端点：BN-SPOT-REST-019。
-///
-/// 待核实：bucketCount/bucketWidthMs 仅在 calculationType=ARITHMETIC_MEAN、externalCalculationId 仅在 calculationType=EXTERNAL 时出现（字段表描述为证）；当前冻结为单 object 联合形态，条件字段归属待逐类型核实
-/// 冻结的 SpotReferencePriceCalculation 响应对象。
-#[derive(Debug, Clone, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct SpotReferencePriceCalculation {
-    /// 响应字段 `symbol`。
-    #[serde(rename = "symbol")]
-    pub symbol: Option<String>,
-    /// 响应字段 `calculationType`。
-    #[serde(rename = "calculationType")]
-    pub calculation_type: Option<String>,
-    /// 响应字段 `bucketCount`。
-    #[serde(rename = "bucketCount")]
-    pub bucket_count: Option<i64>,
-    /// 响应字段 `bucketWidthMs`。
-    #[serde(rename = "bucketWidthMs")]
-    pub bucket_width_ms: Option<i64>,
-    /// 响应字段 `externalCalculationId`。
-    #[serde(rename = "externalCalculationId")]
-    pub external_calculation_id: Option<i64>,
 }

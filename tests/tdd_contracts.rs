@@ -4,24 +4,24 @@
     clippy::panic,
     clippy::unreachable
 )]
-
 //! 三类测试中的 TDD 契约探针；内联响应全部是合成样本，不代表真实源证据。
-//! 主覆盖清单为 77 个入口：76 个族解析器与 `value::validate_decimal`；另保留共享内核探针。
+//! 主覆盖清单为 92 个入口：79 个族解析器与 13 个共享/值对象入口。
 // TDD-PROBE: parse::spot::parse_spot_exchange_info | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
 // TDD-PROBE: parse::spot::parse_spot_execution_rules | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
 // TDD-PROBE: parse::spot::parse_spot_agg_trade | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
 // TDD-PROBE: parse::spot::parse_spot_avg_price | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
 // TDD-PROBE: parse::spot::parse_spot_trade | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
-// TDD-PROBE: parse::spot::parse_spot_block_trade | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
+// TDD-PROBE: parse::spot::parse_spot_block_trade | 变异：放行缺失或批内重复 id | 红=spot_block_trade_requires_unique_local_ids_per_response | 绿=spot_block_trade_requires_unique_local_ids_per_response
 // TDD-PROBE: parse::spot::parse_spot_kline | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
 // TDD-PROBE: parse::spot::parse_spot_ui_kline | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
 // TDD-PROBE: parse::spot::parse_spot_ticker | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
 // TDD-PROBE: parse::spot::parse_spot_ticker24hr | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
-// TDD-PROBE: parse::spot::parse_spot_ticker_price | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
+// TDD-PROBE: parse::spot::parse_spot_ticker_price | 变异：放行缺失 symbol/price、重复 symbol 或非法 price | 红=spot_ticker_price_requires_symbol_and_price_for_each_item | 绿=spot_ticker_price_requires_symbol_and_price_for_each_item
 // TDD-PROBE: parse::spot::parse_spot_book_ticker | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
+// TDD-PROBE: parse::spot::parse_spot_book_snapshot | 变异：误拒 tuple 深度或放行未知字段 | 红=spot_public_parsers | 绿=spot_public_parsers
 // TDD-PROBE: parse::spot::parse_spot_trading_day | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
-// TDD-PROBE: parse::spot::parse_spot_reference_price | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
-// TDD-PROBE: parse::spot::parse_spot_reference_price_calculation | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
+// TDD-PROBE: parse::spot::parse_spot_reference_price | 变异：未知字段放行 | 红=forms_preserve_object_and_array_unknown_field_errors | 绿=forms_preserve_object_and_array_unknown_field_errors
+// TDD-PROBE: parse::spot::parse_spot_reference_price_calculation | 变异：未知字段放行 | 红=forms_preserve_object_and_array_unknown_field_errors | 绿=forms_preserve_object_and_array_unknown_field_errors
 // TDD-PROBE: parse::usdm::parse_usdm_exchange_info | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
 // TDD-PROBE: parse::usdm::parse_usdm_index_info | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
 // TDD-PROBE: parse::usdm::parse_usdm_agg_trade | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
@@ -32,10 +32,10 @@
 // TDD-PROBE: parse::usdm::parse_usdm_mark_price_kline | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
 // TDD-PROBE: parse::usdm::parse_usdm_premium_index | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
 // TDD-PROBE: parse::usdm::parse_usdm_premium_index_kline | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
-// TDD-PROBE: parse::usdm::parse_usdm_funding_rate | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
-// TDD-PROBE: parse::usdm::parse_usdm_funding_info | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
-// TDD-PROBE: parse::usdm::parse_usdm_open_interest | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
-// TDD-PROBE: parse::usdm::parse_usdm_open_interest_hist | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
+// TDD-PROBE: parse::usdm::parse_usdm_funding_rate | 变异：放行缺失 symbol/fundingTime 或重复身份三元组 | 红=usdm_funding_rate_requires_unique_local_identities_per_response | 绿=usdm_funding_rate_requires_unique_local_identities_per_response
+// TDD-PROBE: parse::usdm::parse_usdm_funding_info | 变异：放行缺失或批内重复 symbol | 红=usdm_funding_info_requires_unique_local_symbols_per_response | 绿=usdm_funding_info_requires_unique_local_symbols_per_response
+// TDD-PROBE: parse::usdm::parse_usdm_open_interest | 变异：放行缺失／空白 symbol 或缺失 time | 红=usdm_open_interest_requires_local_symbol_and_time | 绿=usdm_open_interest_requires_local_symbol_and_time
+// TDD-PROBE: parse::usdm::parse_usdm_open_interest_hist | 变异：放行缺失 symbol/timestamp 或重复组合 | 红=usdm_open_interest_hist_requires_unique_local_symbol_times_per_response | 绿=usdm_open_interest_hist_requires_unique_local_symbol_times_per_response
 // TDD-PROBE: parse::usdm::parse_usdm_book_snapshot | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
 // TDD-PROBE: parse::usdm::parse_usdm_book_ticker | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
 // TDD-PROBE: parse::usdm::parse_usdm_ticker_price | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
@@ -61,11 +61,12 @@
 // TDD-PROBE: parse::coinm::parse_coinm_mark_price_kline | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
 // TDD-PROBE: parse::coinm::parse_coinm_premium_index | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
 // TDD-PROBE: parse::coinm::parse_coinm_premium_index_kline | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
-// TDD-PROBE: parse::coinm::parse_coinm_funding_rate | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
-// TDD-PROBE: parse::coinm::parse_coinm_funding_info | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
+// TDD-PROBE: parse::coinm::parse_coinm_funding_rate | 变异：放行缺失 symbol/fundingTime 或批内重复组合 | 红=coinm_funding_rate_requires_unique_local_symbol_times_per_response | 绿=coinm_funding_rate_requires_unique_local_symbol_times_per_response
+// TDD-PROBE: parse::coinm::parse_coinm_funding_info | 变异：放行缺失或批内重复 symbol | 红=coinm_funding_info_requires_unique_local_symbols_per_response | 绿=coinm_funding_info_requires_unique_local_symbols_per_response
 // TDD-PROBE: parse::coinm::parse_coinm_open_interest | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
-// TDD-PROBE: parse::coinm::parse_coinm_open_interest_hist | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
+// TDD-PROBE: parse::coinm::parse_coinm_open_interest_hist | 变异：放行缺失 pair/contractType/timestamp 或重复组合 | 红=coinm_open_interest_hist_requires_unique_local_pair_type_times_per_response | 绿=coinm_open_interest_hist_requires_unique_local_pair_type_times_per_response
 // TDD-PROBE: parse::coinm::parse_coinm_book_ticker | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
+// TDD-PROBE: parse::coinm::parse_coinm_book_snapshot | 变异：误拒 tuple 深度或放行未知字段 | 红=coinm_public_parsers | 绿=coinm_public_parsers
 // TDD-PROBE: parse::coinm::parse_coinm_ticker_price | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
 // TDD-PROBE: parse::coinm::parse_coinm_ticker24hr | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
 // TDD-PROBE: parse::coinm::parse_coinm_taker_buy_sell_vol | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
@@ -80,9 +81,10 @@
 // TDD-PROBE: parse::options::parse_options_kline | 变异：绕过结构校验或误拒合法响应 | 红=options_public_parsers | 绿=options_public_parsers
 // TDD-PROBE: parse::options::parse_options_open_interest | 变异：绕过结构校验或误拒合法响应 | 红=options_public_parsers | 绿=options_public_parsers
 // TDD-PROBE: parse::options::parse_options_mark | 变异：绕过结构校验或误拒合法响应 | 红=options_public_parsers | 绿=options_public_parsers
-// TDD-PROBE: parse::options::parse_options_block_trade | 变异：绕过结构校验或误拒合法响应 | 红=options_public_parsers | 绿=options_public_parsers
-// TDD-PROBE: parse::options::parse_options_trade | 变异：绕过结构校验或误拒合法响应 | 红=options_public_parsers | 绿=options_public_parsers
+// TDD-PROBE: parse::options::parse_options_block_trade | 变异：放行缺失或同 symbol 内重复 id | 红=options_block_trade_uses_symbol_scoped_id | 绿=options_block_trade_uses_symbol_scoped_id
+// TDD-PROBE: parse::options::parse_options_trade | 变异：放行缺失或同 symbol 内重复 tradeId | 红=options_trade_uses_symbol_scoped_trade_id | 绿=options_trade_uses_symbol_scoped_trade_id
 // TDD-PROBE: parse::options::parse_options_ticker | 变异：绕过结构校验或误拒合法响应 | 红=options_public_parsers | 绿=options_public_parsers
+// TDD-PROBE: parse::options::parse_options_book_snapshot | 变异：误拒 tuple 深度或放行未知字段 | 红=options_public_parsers | 绿=options_public_parsers
 // TDD-PROBE: parse::parse_exchange_info | 变异：快照哈希恒空 | 红=whitelist_snapshot_preserves_provenance | 绿=whitelist_snapshot_preserves_provenance
 // TDD-PROBE: parse::find_unknown_fields | 变异：漏报未登记键 | 红=unknown_field_helpers_are_atomic | 绿=unknown_field_helpers_are_atomic
 // TDD-PROBE: parse::reject_unknown_fields | 变异：未知字段放行 | 红=unknown_field_helpers_are_atomic | 绿=unknown_field_helpers_are_atomic
@@ -195,11 +197,18 @@ fn spot_public_parsers() {
     );
     probe!(parse_spot_ticker, r#"{"symbol":"1"}"#);
     probe!(parse_spot_ticker24hr, r#"{"symbol":"1"}"#);
-    probe!(parse_spot_ticker_price, r#"{"symbol":"1"}"#);
+    probe!(parse_spot_ticker_price, r#"{"symbol":"1","price":"1.00"}"#);
     probe!(parse_spot_book_ticker, r#"{"symbol":"1"}"#);
+    probe!(
+        parse_spot_book_snapshot,
+        r#"{"lastUpdateId":1,"bids":[["1","2"]],"asks":[]}"#
+    );
     probe!(parse_spot_trading_day, r#"{"symbol":"1"}"#);
     probe!(parse_spot_reference_price, r#"{"symbol":"1"}"#);
-    probe!(parse_spot_reference_price_calculation, r#"{"symbol":"1"}"#);
+    probe!(
+        parse_spot_reference_price_calculation,
+        r#"{"symbol":"1","calculationType":"EXTERNAL","externalCalculationId":1}"#
+    );
 }
 
 #[test]
@@ -229,10 +238,19 @@ fn usdm_public_parsers() {
         parse_usdm_premium_index_kline,
         r#"[[1,"1","1","1","1","1",1,"1",1,"1","1","1"]]"#
     );
-    probe!(parse_usdm_funding_rate, r#"[{"symbol":"1"}]"#);
-    probe!(parse_usdm_funding_info, r#"[{"symbol":"1"}]"#);
-    probe!(parse_usdm_open_interest, r#"{"openInterest":"1"}"#);
-    probe!(parse_usdm_open_interest_hist, r#"[{"symbol":"1"}]"#);
+    probe!(
+        parse_usdm_funding_rate,
+        r#"[{"symbol":"BTCUSDT","fundingTime":1,"rateType":"Regular"}]"#
+    );
+    probe!(parse_usdm_funding_info, r#"[{"symbol":"BLZUSDT"}]"#);
+    probe!(
+        parse_usdm_open_interest,
+        r#"{"openInterest":"1","symbol":"BTCUSDT","time":1}"#
+    );
+    probe!(
+        parse_usdm_open_interest_hist,
+        r#"[{"symbol":"BTCUSDT","timestamp":1}]"#
+    );
     probe!(parse_usdm_book_snapshot, r#"{"lastUpdateId":1}"#);
     probe!(parse_usdm_book_ticker, r#"{"symbol":"1"}"#);
     probe!(parse_usdm_ticker_price, r#"{"symbol":"1"}"#);
@@ -289,11 +307,21 @@ fn coinm_public_parsers() {
         parse_coinm_premium_index_kline,
         r#"[[1,"1","1","1","1","1",1,"1",1,"1","1","1"]]"#
     );
-    probe!(parse_coinm_funding_rate, r#"[{"symbol":"1"}]"#);
-    probe!(parse_coinm_funding_info, r#"[{"symbol":"1"}]"#);
+    probe!(
+        parse_coinm_funding_rate,
+        r#"[{"symbol":"BTCUSD_PERP","fundingTime":1}]"#
+    );
+    probe!(parse_coinm_funding_info, r#"[{"symbol":"BTCUSD_PERP"}]"#);
     probe!(parse_coinm_open_interest, r#"{"symbol":"1"}"#);
-    probe!(parse_coinm_open_interest_hist, r#"[{"pair":"1"}]"#);
+    probe!(
+        parse_coinm_open_interest_hist,
+        r#"[{"pair":"BTCUSD","contractType":"PERPETUAL","timestamp":1}]"#
+    );
     probe!(parse_coinm_book_ticker, r#"[{"lastUpdateId":1}]"#);
+    probe!(
+        parse_coinm_book_snapshot,
+        r#"{"lastUpdateId":1,"bids":[["1","2"]],"asks":[]}"#
+    );
     probe!(parse_coinm_ticker_price, r#"[{"symbol":"1"}]"#);
     probe!(parse_coinm_ticker24hr, r#"[{"symbol":"1"}]"#);
     probe!(parse_coinm_taker_buy_sell_vol, r#"[{"pair":"1"}]"#);
@@ -324,9 +352,13 @@ fn options_public_parsers() {
     );
     probe!(parse_options_open_interest, r#"[{"symbol":"1"}]"#);
     probe!(parse_options_mark, r#"[{"symbol":"1"}]"#);
-    probe!(parse_options_block_trade, r#"[{"id":1}]"#);
-    probe!(parse_options_trade, r#"[{"id":1}]"#);
+    probe!(parse_options_block_trade, r#"[{"symbol":"SYNTH","id":1}]"#);
+    probe!(parse_options_trade, r#"[{"symbol":"SYNTH","tradeId":1}]"#);
     probe!(parse_options_ticker, r#"[{"symbol":"1"}]"#);
+    probe!(
+        parse_options_book_snapshot,
+        r#"{"lastUpdateId":1,"bids":[["1","2"]],"asks":[]}"#
+    );
 }
 
 #[test]
@@ -388,7 +420,6 @@ fn forms_preserve_object_and_array_unknown_field_errors() {
     form!(
         parse_spot_ticker,
         parse_spot_ticker24hr,
-        parse_spot_ticker_price,
         parse_spot_book_ticker,
         parse_spot_trading_day,
         parse_usdm_premium_index,
@@ -398,10 +429,38 @@ fn forms_preserve_object_and_array_unknown_field_errors() {
         parse_usdm_asset_index,
         parse_usdm_adl_risk,
     );
+    assert!(parse_spot_ticker_price(r#"{"symbol":"SYNTH","price":"1.00"}"#).is_ok());
+    assert!(parse_spot_ticker_price(r#"[{"symbol":"SYNTH","price":"1.00"}]"#).is_ok());
+    assert_eq!(
+        parse_spot_ticker_price(r#"{"symbol":"SYNTH","price":"1.00","newField":1}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
+    );
+    assert_eq!(
+        parse_spot_ticker_price(
+            r#"[{"symbol":"SYNTH","price":"1.00"},{"symbol":"SYNTH","price":"1.00","newField":1}]"#
+        )
+        .unwrap_err()
+        .kind(),
+        BinanceErrorKind::UnknownField
+    );
     assert!(parse_usdm_insurance_balance(r#"{"symbols":["SYNTH"]}"#).is_ok());
     assert!(parse_usdm_insurance_balance(r#"[{"symbols":["SYNTH"]}]"#).is_ok());
     assert_eq!(
         parse_usdm_insurance_balance(r#"[{"symbols":["SYNTH"],"assets":[{"newField":1}]}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
+    );
+    assert_eq!(
+        parse_spot_reference_price(r#"{"symbol":"SYNTH","newField":1}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
+    );
+    assert_eq!(
+        parse_spot_reference_price_calculation(r#"{"symbol":"SYNTH","newField":1}"#)
             .unwrap_err()
             .kind(),
         BinanceErrorKind::UnknownField
@@ -411,19 +470,20 @@ fn forms_preserve_object_and_array_unknown_field_errors() {
 #[test]
 fn twelve_kline_entries_reject_duplicate_identity_and_wrong_lengths() {
     // 合同证据只覆盖这十二类；不对 SpotUiKline 自行推断唯一身份。
-    let parsers: [fn(&str) -> binancex::BinanceResult<binancex::value::spot::SpotKline>; 12] = [
-        parse_spot_kline,
-        parse_usdm_continuous_kline,
-        parse_usdm_kline,
-        parse_usdm_index_price_kline,
-        parse_usdm_mark_price_kline,
-        parse_usdm_premium_index_kline,
-        parse_coinm_continuous_kline,
-        parse_coinm_kline,
-        parse_coinm_index_price_kline,
-        parse_coinm_mark_price_kline,
-        parse_coinm_premium_index_kline,
-        parse_options_kline,
+    type KlineParser = fn(&str) -> binancex::BinanceResult<Vec<binancex::value::KlineRow>>;
+    let parsers: [KlineParser; 12] = [
+        |input| parse_spot_kline(input).map(|rows| rows.0),
+        |input| parse_usdm_continuous_kline(input).map(|rows| rows.0),
+        |input| parse_usdm_kline(input).map(|rows| rows.0),
+        |input| parse_usdm_index_price_kline(input).map(|rows| rows.0),
+        |input| parse_usdm_mark_price_kline(input).map(|rows| rows.0),
+        |input| parse_usdm_premium_index_kline(input).map(|rows| rows.0),
+        |input| parse_coinm_continuous_kline(input).map(|rows| rows.0),
+        |input| parse_coinm_kline(input).map(|rows| rows.0),
+        |input| parse_coinm_index_price_kline(input).map(|rows| rows.0),
+        |input| parse_coinm_mark_price_kline(input).map(|rows| rows.0),
+        |input| parse_coinm_premium_index_kline(input).map(|rows| rows.0),
+        |input| parse_options_kline(input).map(|rows| rows.0),
     ];
     let first = json!([1, "1", "1", "1", "1", "1", 2, "1", 1, "1", "1", "0"]);
     let changed_same_time = json!([1, "9", "9", "9", "9", "9", 3, "9", 9, "9", "9", "0"]);
@@ -518,14 +578,14 @@ fn public_decimal_validator_checks_complete_lexemes() {
 
 #[test]
 fn quantity_preserves_sign_and_unit() {
-    let negative = Quantity::new("-3.25", QuantityUnit::Contracts).unwrap();
+    let negative = Quantity::new(Decimal::new("-3.25").unwrap(), QuantityUnit::Contracts);
     assert_eq!(negative.value().as_str(), "-3.25");
     assert_eq!(negative.unit(), QuantityUnit::Contracts);
     assert_eq!(negative.sign(), Sign::Negative);
-    let zero = Quantity::new("-0", QuantityUnit::QuoteAsset).unwrap();
+    let zero = Quantity::new(Decimal::new("-0").unwrap(), QuantityUnit::QuoteAsset);
     assert_eq!(zero.value().as_str(), "-0");
     assert_eq!(zero.sign(), Sign::Zero);
-    assert!(Quantity::new("not-a-number", QuantityUnit::BaseAsset).is_err());
+    assert!(Decimal::new("not-a-number").is_err());
 }
 
 #[test]
@@ -598,6 +658,60 @@ fn average_price_requires_selected_key_fields() {
             BinanceErrorKind::Invalid
         );
     }
+}
+
+#[test]
+fn spot_ticker_price_requires_symbol_and_price_for_each_item() {
+    assert_eq!(
+        parse_spot_ticker_price(r#"{}"#).unwrap_err().kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    for raw in [
+        r#"{"symbol":"BTCUSDT"}"#,
+        r#"{"price":"1.00"}"#,
+        r#"{"symbol":null,"price":"1.00"}"#,
+        r#"{"symbol":"BTCUSDT","price":null}"#,
+        r#"{"symbol":"","price":"1.00"}"#,
+        r#"{"symbol":"BTCUSDT","price":"   "}"#,
+        r#"[{"symbol":"BTCUSDT","price":"1.00"},{"symbol":"ETHUSDT"}]"#,
+    ] {
+        assert_eq!(
+            parse_spot_ticker_price(raw).unwrap_err().kind(),
+            BinanceErrorKind::Missing,
+            "价格响应关键字段错误分类不符：{raw}"
+        );
+    }
+    assert!(parse_spot_ticker_price(
+        r#"[{"symbol":"BTCUSDT","price":"1.00"},{"symbol":"ETHUSDT","price":"2.00"}]"#
+    )
+    .is_ok());
+    assert!(parse_spot_ticker_price("[]").is_ok());
+    assert_eq!(
+        parse_spot_ticker_price(
+            r#"[{"symbol":"BTCUSDT","price":"1.00"},{"symbol":"BTCUSDT","price":"2.00"}]"#
+        )
+        .unwrap_err()
+        .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_spot_ticker_price(r#"{"symbol":"BTCUSDT","price":"not-a-price"}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Invalid
+    );
+    assert_eq!(
+        parse_spot_ticker_price(
+            r#"[{"symbol":"","price":"1.00"},{"symbol":"ETHUSDT","price":"2.00","newField":1}]"#
+        )
+        .unwrap_err()
+        .kind(),
+        BinanceErrorKind::UnknownField
+    );
+    assert_eq!(
+        parse_spot_ticker_price(r#"[null]"#).unwrap_err().kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
 }
 
 #[test]
@@ -710,21 +824,34 @@ fn calendar_and_interval_validate_boundaries() {
 
 #[test]
 fn identities_keep_route_and_market_separate() {
-    let endpoint = EndpointId::new(
-        "binance",
-        "usdm",
-        "GET",
-        "/fapi/v1/ticker/price",
-        "/fapi/v1",
-    );
+    let endpoint = EndpointId::new("binance", "usdm", "GET", "/fapi/v1/klines", "/fapi/v1");
     assert_eq!(endpoint.family(), "usdm");
     assert_eq!(endpoint.method(), "GET");
-    assert_eq!(endpoint.path(), "/fapi/v1/ticker/price");
+    assert_eq!(endpoint.path(), "/fapi/v1/klines");
     assert_eq!(endpoint.version(), "/fapi/v1");
+    let alternate_route = EndpointId::new("binance", "coinm", "GET", "/dapi/v1/klines", "/dapi/v1");
+    assert_ne!(endpoint, alternate_route);
     let instrument = Instrument::Symbol("SYNTH".into());
-    let series = DataSeriesId::new("spot", instrument.clone(), "native");
-    assert_eq!(series.market(), "spot");
-    assert_eq!(series.instrument(), &instrument);
+    // 合成等价路由样例，只验证来源字段不参与业务身份。
+    let series = DataSeriesId::new("synthetic-market", instrument.clone(), "1m", "trade-kline");
+    let equivalent_route_series =
+        DataSeriesId::new("synthetic-market", instrument.clone(), "1m", "trade-kline");
+    assert_eq!(series, equivalent_route_series);
+    assert_eq!(series.market(), "synthetic-market");
+    assert_eq!(
+        series.entity(),
+        &binancex::DataSeriesEntity::Instrument(instrument)
+    );
+}
+
+#[test]
+fn data_series_identity_includes_semantic_dimension() {
+    let instrument = Instrument::Symbol("SYNTH".into());
+    let klines = DataSeriesId::new("spot", instrument.clone(), "1m", "trade-kline");
+    let ui_klines = DataSeriesId::new("spot", instrument, "1m", "ui-kline");
+    assert_ne!(klines, ui_klines);
+    assert_eq!(klines.variant(), "1m");
+    assert_eq!(klines.semantic_dimension(), "trade-kline");
 }
 
 #[test]
@@ -733,4 +860,466 @@ fn hash_validation_rejects_malformed_values() {
     for raw in ["a".repeat(63), "a".repeat(65), "g".repeat(64)] {
         assert!(binancex::value::validate_sha256_hex(&raw).is_err());
     }
+}
+#[test]
+fn spot_block_trade_requires_unique_local_ids_per_response() {
+    assert!(parse_spot_block_trade("[]").unwrap().is_empty());
+    assert!(parse_spot_block_trade(r#"[{"id":1},{"id":2}]"#).is_ok());
+    assert_eq!(
+        parse_spot_block_trade(r#"[{"id":1},{"id":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_spot_block_trade(r#"[{"price":"1"}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_spot_block_trade(r#"[{"id":null}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+}
+#[test]
+fn options_trade_uses_symbol_scoped_trade_id() {
+    assert!(parse_options_trade("[]").unwrap().is_empty());
+    assert!(parse_options_trade(
+        r#"[{"symbol":"BTC-250725-1200-P","tradeId":1},{"symbol":"ETH-250725-1200-P","tradeId":1}]"#
+    )
+    .is_ok());
+    assert!(parse_options_trade(
+        r#"[{"symbol":"BTC-250725-1200-P","id":1,"tradeId":1},{"symbol":"BTC-250725-1200-P","id":2,"tradeId":2}]"#
+    )
+    .is_ok());
+    assert_eq!(
+        parse_options_trade(
+            r#"[{"symbol":"BTC-250725-1200-P","id":1,"tradeId":7},{"symbol":"BTC-250725-1200-P","id":2,"tradeId":7}]"#
+        )
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_options_trade(r#"[{"symbol":"BTC-250725-1200-P"}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_options_trade(r#"[{"tradeId":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_options_trade(r#"[{"symbol":"BTC-250725-1200-P","tradeId":null}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    for raw in [
+        r#"[{"symbol":null,"tradeId":1}]"#,
+        r#"[{"symbol":"","tradeId":1}]"#,
+    ] {
+        assert_eq!(
+            parse_options_trade(raw).unwrap_err().kind(),
+            BinanceErrorKind::SchemaMismatch
+        );
+    }
+    assert_eq!(
+        parse_options_trade(r#"[{"symbol":"BTC-250725-1200-P","tradeId":1,"id":null}]"#)
+            .unwrap()
+            .len(),
+        1
+    );
+}
+#[test]
+fn options_block_trade_uses_symbol_scoped_id() {
+    assert!(parse_options_block_trade("[]").unwrap().is_empty());
+    assert!(parse_options_block_trade(
+        r#"[{"symbol":"BTC-250725-1200-P","id":1},{"symbol":"ETH-250725-1200-P","id":1}]"#
+    )
+    .is_ok());
+    assert_eq!(
+        parse_options_block_trade(
+            r#"[{"symbol":"BTC-250725-1200-P","id":1,"tradeId":1},{"symbol":"BTC-250725-1200-P","id":1,"tradeId":2}]"#
+        )
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_options_block_trade(r#"[{"id":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_options_block_trade(r#"[{"symbol":"BTC-250725-1200-P"}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_options_block_trade(r#"[{"symbol":"BTC-250725-1200-P","id":null}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_options_block_trade(r#"[{"symbol":"","id":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_options_block_trade(r#"[{"symbol":null,"id":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+}
+#[test]
+fn usdm_funding_rate_requires_unique_local_identities_per_response() {
+    assert!(parse_usdm_funding_rate(
+        r#"[{"symbol":"BTCUSDT","fundingTime":1},{"symbol":"ETHUSDT","fundingTime":1}]"#
+    )
+    .is_ok());
+    assert!(parse_usdm_funding_rate("[]").unwrap().is_empty());
+    assert_eq!(
+        parse_usdm_funding_rate(
+            r#"[{"symbol":"BTCUSDT","fundingTime":1},{"symbol":"BTCUSDT","fundingTime":2}]"#
+        )
+        .unwrap()
+        .len(),
+        2
+    );
+    assert_eq!(
+        parse_usdm_funding_rate(
+            r#"[{"symbol":"BTCUSDT","fundingTime":1},{"symbol":"BTCUSDT","fundingTime":1}]"#
+        )
+        .unwrap_err()
+        .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert!(parse_usdm_funding_rate(
+        r#"[{"symbol":"BTCUSDT","fundingTime":1,"rateType":"Regular"},{"symbol":"BTCUSDT","fundingTime":1,"rateType":"Special"}]"#
+    )
+    .is_ok());
+    assert_eq!(
+        parse_usdm_funding_rate(
+            r#"[{"symbol":"BTCUSDT","fundingTime":1,"rateType":"Regular"},{"symbol":"BTCUSDT","fundingTime":1,"rateType":"Regular"}]"#
+        )
+        .unwrap_err()
+        .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_usdm_funding_rate(
+            r#"[{"symbol":"BTCUSDT","fundingTime":1},{"symbol":"BTCUSDT","fundingTime":1,"rateType":null}]"#
+        )
+        .unwrap_err()
+        .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_usdm_funding_rate(r#"[{"fundingTime":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_usdm_funding_rate(r#"[{"symbol":"BTCUSDT"}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_usdm_funding_rate(r#"[{"symbol":null,"fundingTime":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_usdm_funding_rate(r#"[{"symbol":"BTCUSDT","fundingTime":null}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_usdm_funding_rate(r#"[{"symbol":" ","fundingTime":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_usdm_funding_rate(r#"[{"unexpected":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
+    );
+}
+#[test]
+fn coinm_funding_rate_requires_unique_local_symbol_times_per_response() {
+    assert!(parse_coinm_funding_rate(
+        r#"[{"symbol":"BTCUSD_PERP","fundingTime":1},{"symbol":"ETHUSD_PERP","fundingTime":1}]"#
+    )
+    .is_ok());
+    assert!(parse_coinm_funding_rate("[]").unwrap().is_empty());
+    assert_eq!(
+        parse_coinm_funding_rate(
+            r#"[{"symbol":"BTCUSD_PERP","fundingTime":1},{"symbol":"BTCUSD_PERP","fundingTime":1}]"#
+        )
+        .unwrap_err()
+        .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_coinm_funding_rate(r#"[{"fundingTime":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_coinm_funding_rate(r#"[{"symbol":"BTCUSD_PERP"}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_coinm_funding_rate(r#"[{"symbol":null,"fundingTime":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_coinm_funding_rate(r#"[{"symbol":" ","fundingTime":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_coinm_funding_rate(r#"[{"unexpected":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
+    );
+}
+#[test]
+fn usdm_funding_info_requires_unique_local_symbols_per_response() {
+    assert!(parse_usdm_funding_info(r#"[{"symbol":"BTCUSDT"},{"symbol":"ETHUSDT"}]"#).is_ok());
+    assert!(parse_usdm_funding_info("[]").unwrap().is_empty());
+    assert_eq!(
+        parse_usdm_funding_info(r#"[{"symbol":"BTCUSDT"},{"symbol":"BTCUSDT"}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_usdm_funding_info(r#"[{"adjustedFundingRateCap":"0.02"}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_usdm_funding_info(r#"[{"symbol":null}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_usdm_funding_info(r#"[{"symbol":" "}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_usdm_funding_info(r#"[{"unknown":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
+    );
+}
+#[test]
+fn coinm_funding_info_requires_unique_local_symbols_per_response() {
+    assert!(
+        parse_coinm_funding_info(r#"[{"symbol":"BTCUSD_PERP"},{"symbol":"ETHUSD_PERP"}]"#).is_ok()
+    );
+    assert!(parse_coinm_funding_info("[]").unwrap().is_empty());
+    assert_eq!(
+        parse_coinm_funding_info(r#"[{"symbol":"BTCUSD_PERP"},{"symbol":"BTCUSD_PERP"}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_coinm_funding_info(r#"[{"adjustedFundingRateCap":"0.02"}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_coinm_funding_info(r#"[{"symbol":null}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_coinm_funding_info(r#"[{"symbol":" "}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_coinm_funding_info(r#"[{"unknown":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
+    );
+}
+#[test]
+fn usdm_open_interest_hist_requires_unique_local_symbol_times_per_response() {
+    assert!(parse_usdm_open_interest_hist(
+        r#"[{"symbol":"BTCUSDT","timestamp":1},{"symbol":"ETHUSDT","timestamp":1}]"#
+    )
+    .is_ok());
+    assert!(parse_usdm_open_interest_hist("[]").unwrap().is_empty());
+    assert!(parse_usdm_open_interest_hist(
+        r#"[{"symbol":"BTCUSDT","timestamp":1},{"symbol":"BTCUSDT","timestamp":2}]"#
+    )
+    .is_ok());
+    assert_eq!(
+        parse_usdm_open_interest_hist(
+            r#"[{"symbol":"BTCUSDT","timestamp":1},{"symbol":"BTCUSDT","timestamp":1}]"#
+        )
+        .unwrap_err()
+        .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_usdm_open_interest_hist(r#"[{"timestamp":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_usdm_open_interest_hist(r#"[{"symbol":"BTCUSDT"}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_usdm_open_interest_hist(r#"[{"symbol":null,"timestamp":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_usdm_open_interest_hist(r#"[{"symbol":" ","timestamp":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_usdm_open_interest_hist(r#"[{"symbol":"BTCUSDT","timestamp":null}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_usdm_open_interest_hist(r#"[{"unknown":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
+    );
+}
+#[test]
+fn coinm_open_interest_hist_requires_unique_local_pair_type_times_per_response() {
+    assert!(parse_coinm_open_interest_hist(
+        r#"[{"pair":"BTCUSD","contractType":"PERPETUAL","timestamp":1},{"pair":"BTCUSD","contractType":"CURRENT_QUARTER","timestamp":1}]"#
+    )
+    .is_ok());
+    assert!(parse_coinm_open_interest_hist("[]").unwrap().is_empty());
+    assert_eq!(
+        parse_coinm_open_interest_hist(
+            r#"[{"pair":"BTCUSD","contractType":"PERPETUAL","timestamp":1},{"pair":"BTCUSD","contractType":"PERPETUAL","timestamp":1}]"#
+        )
+        .unwrap_err()
+        .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_coinm_open_interest_hist(r#"[{"contractType":"PERPETUAL","timestamp":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_coinm_open_interest_hist(r#"[{"pair":"BTCUSD","timestamp":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_coinm_open_interest_hist(r#"[{"pair":"BTCUSD","contractType":"PERPETUAL"}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_coinm_open_interest_hist(r#"[{"pair":"BTCUSD","contractType":null,"timestamp":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_coinm_open_interest_hist(
+            r#"[{"pair":" ","contractType":"PERPETUAL","timestamp":1}]"#
+        )
+        .unwrap_err()
+        .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_coinm_open_interest_hist(r#"[{"unknown":1}]"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
+    );
+}
+#[test]
+fn usdm_open_interest_requires_local_symbol_and_time() {
+    assert!(parse_usdm_open_interest(r#"{"symbol":"BTCUSDT","time":1}"#).is_ok());
+    assert_eq!(
+        parse_usdm_open_interest(r#"{"time":1}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_usdm_open_interest(r#"{"symbol":"BTCUSDT"}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    for input in [
+        r#"{"symbol":null,"time":1}"#,
+        r#"{"symbol":"  ","time":1}"#,
+        r#"{"symbol":"BTCUSDT","time":null}"#,
+    ] {
+        assert_eq!(
+            parse_usdm_open_interest(input).unwrap_err().kind(),
+            BinanceErrorKind::SchemaMismatch
+        );
+    }
+    assert_eq!(
+        parse_usdm_open_interest(r#"{"symbol":"BTCUSDT","time":1,"unknown":0}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
+    );
 }

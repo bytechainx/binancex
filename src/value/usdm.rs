@@ -4,17 +4,6 @@
 //! 所有字段当前均可缺；对象拒绝未知字段，wire string 数值不转换。
 //! 开放点沿用冻结合同，不代表生产接入许可；动态 map 的键不锁定为观测样本。
 
-pub use analytics::{
-    UsdmAdlRisk, UsdmAdlRiskItem, UsdmAssetIndex, UsdmAssetIndexItem, UsdmBasis, UsdmBasisItem,
-    UsdmConstituents, UsdmConstituentsConstituentsItem, UsdmDeliveryPrice, UsdmDeliveryPriceItem,
-    UsdmGlobalLongShortAccountRatio, UsdmGlobalLongShortAccountRatioItem, UsdmInsuranceBalance,
-    UsdmInsuranceBalanceItem, UsdmInsuranceBalanceItemAssetsItem, UsdmTakerLongShortRatio,
-    UsdmTakerLongShortRatioItem, UsdmTopLongShortAccountRatio, UsdmTopLongShortAccountRatioItem,
-    UsdmTopLongShortPositionRatio, UsdmTopLongShortPositionRatioItem,
-};
-
-mod analytics;
-
 #[doc(hidden)]
 /// USDM 嵌套响应对象 UsdmExchangeInfoRateLimitsItem。
 #[derive(Debug, Clone, PartialEq, serde::Deserialize)]
@@ -304,69 +293,13 @@ pub struct UsdmTradeItem {
 /// USDM 冻结集合响应 UsdmTrade。
 pub type UsdmTrade = Vec<UsdmTradeItem>;
 
-/// USDM 冻结集合响应 UsdmContinuousKline。
-pub type UsdmContinuousKline = Vec<(
-    i64,
-    String,
-    String,
-    String,
-    String,
-    String,
-    i64,
-    String,
-    i64,
-    String,
-    String,
-    String,
-)>;
+crate::value::typed_kline!(UsdmContinuousKline, "USDM 连续合约 K 线响应。");
 
-/// USDM 冻结集合响应 UsdmKline。
-pub type UsdmKline = Vec<(
-    i64,
-    String,
-    String,
-    String,
-    String,
-    String,
-    i64,
-    String,
-    i64,
-    String,
-    String,
-    String,
-)>;
+crate::value::typed_kline!(UsdmKline, "USDM 原生 K 线响应。");
 
-/// USDM 冻结集合响应 UsdmIndexPriceKline。
-pub type UsdmIndexPriceKline = Vec<(
-    i64,
-    String,
-    String,
-    String,
-    String,
-    String,
-    i64,
-    String,
-    i64,
-    String,
-    String,
-    String,
-)>;
+crate::value::typed_kline!(UsdmIndexPriceKline, "USDM 指数价格 K 线响应。");
 
-/// USDM 冻结集合响应 UsdmMarkPriceKline。
-pub type UsdmMarkPriceKline = Vec<(
-    i64,
-    String,
-    String,
-    String,
-    String,
-    String,
-    i64,
-    String,
-    i64,
-    String,
-    String,
-    String,
-)>;
+crate::value::typed_kline!(UsdmMarkPriceKline, "USDM 标记价格 K 线响应。");
 
 #[doc(hidden)]
 /// USDM 嵌套响应对象 UsdmPremiumIndexItem。
@@ -410,21 +343,7 @@ pub enum UsdmPremiumIndex {
     Array(Vec<UsdmPremiumIndexItem>),
 }
 
-/// USDM 冻结集合响应 UsdmPremiumIndexKline。
-pub type UsdmPremiumIndexKline = Vec<(
-    i64,
-    String,
-    String,
-    String,
-    String,
-    String,
-    i64,
-    String,
-    i64,
-    String,
-    String,
-    String,
-)>;
+crate::value::typed_kline!(UsdmPremiumIndexKline, "USDM 溢价指数 K 线响应。");
 
 #[doc(hidden)]
 /// USDM 嵌套响应对象 UsdmFundingRateItem。
@@ -667,73 +586,107 @@ pub enum UsdmTicker24hr {
 }
 
 #[doc(hidden)]
-/// USDM 嵌套响应对象 UsdmTradingScheduleMarketSchedulesValueSessionsItem。
+/// USDM 嵌套响应对象 UsdmTakerLongShortRatioItem。
 #[derive(Debug, Clone, PartialEq, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct UsdmTradingScheduleMarketSchedulesValueSessionsItem {
-    /// 原始响应字段 startTime；未提供时为 None。
-    #[serde(rename = "startTime")]
-    pub start_time: Option<i64>,
-    /// 原始响应字段 endTime；未提供时为 None。
-    #[serde(rename = "endTime")]
-    pub end_time: Option<i64>,
-    /// 原始响应字段 type；未提供时为 None。
-    #[serde(rename = "type")]
-    pub r#type: Option<String>,
+pub struct UsdmTakerLongShortRatioItem {
+    /// 原始响应字段 buySellRatio；未提供时为 None。
+    #[serde(rename = "buySellRatio")]
+    pub buy_sell_ratio: Option<String>,
+    /// 原始响应字段 buyVol；未提供时为 None。
+    #[serde(rename = "buyVol")]
+    pub buy_vol: Option<String>,
+    /// 原始响应字段 sellVol；未提供时为 None。
+    #[serde(rename = "sellVol")]
+    pub sell_vol: Option<String>,
+    /// 原始响应字段 timestamp；未提供时为 None。
+    #[serde(rename = "timestamp")]
+    pub timestamp: Option<i64>,
 }
+
+/// USDM 冻结集合响应 UsdmTakerLongShortRatio。
+pub type UsdmTakerLongShortRatio = Vec<UsdmTakerLongShortRatioItem>;
 
 #[doc(hidden)]
-/// USDM 嵌套响应对象 UsdmTradingScheduleMarketSchedulesValue。
+/// USDM 嵌套响应对象 UsdmGlobalLongShortAccountRatioItem。
 #[derive(Debug, Clone, PartialEq, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct UsdmTradingScheduleMarketSchedulesValue {
-    /// 原始响应字段 sessions；未提供时为 None。
-    #[serde(rename = "sessions")]
-    pub sessions: Option<Vec<UsdmTradingScheduleMarketSchedulesValueSessionsItem>>,
+pub struct UsdmGlobalLongShortAccountRatioItem {
+    /// 原始响应字段 symbol；未提供时为 None。
+    #[serde(rename = "symbol")]
+    pub symbol: Option<String>,
+    /// 原始响应字段 longShortRatio；未提供时为 None。
+    #[serde(rename = "longShortRatio")]
+    pub long_short_ratio: Option<String>,
+    /// 原始响应字段 longAccount；未提供时为 None。
+    #[serde(rename = "longAccount")]
+    pub long_account: Option<String>,
+    /// 原始响应字段 shortAccount；未提供时为 None。
+    #[serde(rename = "shortAccount")]
+    pub short_account: Option<String>,
+    /// 原始响应字段 timestamp；未提供时为 None。
+    #[serde(rename = "timestamp")]
+    pub timestamp: Option<i64>,
 }
 
-/// USDM 冻结响应类型 UsdmTradingSchedule。
-/// 开放点：marketSchedules 键集为渲染页观测枚举（六市场），官方未声明键集封闭；遇新键须先扩证据再放行。
-#[derive(Debug, Clone, PartialEq, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct UsdmTradingSchedule {
-    /// 原始响应字段 updateTime；未提供时为 None。
-    #[serde(rename = "updateTime")]
-    pub update_time: Option<i64>,
-    /// 原始响应字段 marketSchedules；未提供时为 None。
-    #[serde(rename = "marketSchedules")]
-    pub market_schedules:
-        Option<std::collections::BTreeMap<String, UsdmTradingScheduleMarketSchedulesValue>>,
-}
+/// USDM 冻结集合响应 UsdmGlobalLongShortAccountRatio。
+pub type UsdmGlobalLongShortAccountRatio = Vec<UsdmGlobalLongShortAccountRatioItem>;
 
 #[doc(hidden)]
-/// USDM 嵌套响应对象 UsdmConvertExchangeInfoItem。
+/// USDM 嵌套响应对象 UsdmTopLongShortAccountRatioItem。
 #[derive(Debug, Clone, PartialEq, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct UsdmConvertExchangeInfoItem {
-    /// 原始响应字段 fromAsset；未提供时为 None。
-    #[serde(rename = "fromAsset")]
-    pub from_asset: Option<String>,
-    /// 原始响应字段 toAsset；未提供时为 None。
-    #[serde(rename = "toAsset")]
-    pub to_asset: Option<String>,
-    /// 原始响应字段 fromAssetMinAmount；未提供时为 None。
-    #[serde(rename = "fromAssetMinAmount")]
-    pub from_asset_min_amount: Option<String>,
-    /// 原始响应字段 fromAssetMaxAmount；未提供时为 None。
-    #[serde(rename = "fromAssetMaxAmount")]
-    pub from_asset_max_amount: Option<String>,
-    /// 原始响应字段 toAssetMinAmount；未提供时为 None。
-    #[serde(rename = "toAssetMinAmount")]
-    pub to_asset_min_amount: Option<String>,
-    /// 原始响应字段 toAssetMaxAmount；未提供时为 None。
-    #[serde(rename = "toAssetMaxAmount")]
-    pub to_asset_max_amount: Option<String>,
-    /// 原始响应字段 fromIsBase；未提供时为 None。
-    #[serde(rename = "fromIsBase")]
-    pub from_is_base: Option<bool>,
+pub struct UsdmTopLongShortAccountRatioItem {
+    /// 原始响应字段 symbol；未提供时为 None。
+    #[serde(rename = "symbol")]
+    pub symbol: Option<String>,
+    /// 原始响应字段 longShortRatio；未提供时为 None。
+    #[serde(rename = "longShortRatio")]
+    pub long_short_ratio: Option<String>,
+    /// 原始响应字段 longAccount；未提供时为 None。
+    #[serde(rename = "longAccount")]
+    pub long_account: Option<String>,
+    /// 原始响应字段 shortAccount；未提供时为 None。
+    #[serde(rename = "shortAccount")]
+    pub short_account: Option<String>,
+    /// 原始响应字段 timestamp；未提供时为 None。
+    #[serde(rename = "timestamp")]
+    pub timestamp: Option<i64>,
 }
 
-/// USDM 冻结集合响应 UsdmConvertExchangeInfo。
-/// 开放点：fromIsBase 仅见于活体捕获（渲染页未记载）——文档滞后差异已登记；如官方文档后续补载可撤此点。
-pub type UsdmConvertExchangeInfo = Vec<UsdmConvertExchangeInfoItem>;
+/// USDM 冻结集合响应 UsdmTopLongShortAccountRatio。
+pub type UsdmTopLongShortAccountRatio = Vec<UsdmTopLongShortAccountRatioItem>;
+
+#[doc(hidden)]
+/// USDM 嵌套响应对象 UsdmTopLongShortPositionRatioItem。
+#[derive(Debug, Clone, PartialEq, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct UsdmTopLongShortPositionRatioItem {
+    /// 原始响应字段 symbol；未提供时为 None。
+    #[serde(rename = "symbol")]
+    pub symbol: Option<String>,
+    /// 原始响应字段 longShortRatio；未提供时为 None。
+    #[serde(rename = "longShortRatio")]
+    pub long_short_ratio: Option<String>,
+    /// 原始响应字段 longAccount；未提供时为 None。
+    #[serde(rename = "longAccount")]
+    pub long_account: Option<String>,
+    /// 原始响应字段 shortAccount；未提供时为 None。
+    #[serde(rename = "shortAccount")]
+    pub short_account: Option<String>,
+    /// 原始响应字段 timestamp；未提供时为 None。
+    #[serde(rename = "timestamp")]
+    pub timestamp: Option<i64>,
+}
+
+/// USDM 冻结集合响应 UsdmTopLongShortPositionRatio。
+pub type UsdmTopLongShortPositionRatio = Vec<UsdmTopLongShortPositionRatioItem>;
+
+mod market_data;
+pub use market_data::{
+    UsdmAdlRisk, UsdmAdlRiskItem, UsdmAssetIndex, UsdmAssetIndexItem, UsdmBasis, UsdmBasisItem,
+    UsdmConstituents, UsdmConstituentsConstituentsItem, UsdmConvertExchangeInfo,
+    UsdmConvertExchangeInfoItem, UsdmDeliveryPrice, UsdmDeliveryPriceItem, UsdmInsuranceBalance,
+    UsdmInsuranceBalanceItem, UsdmInsuranceBalanceItemAssetsItem, UsdmTradingSchedule,
+    UsdmTradingScheduleMarketSchedulesValue, UsdmTradingScheduleMarketSchedulesValueSessionsItem,
+};

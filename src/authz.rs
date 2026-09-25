@@ -112,12 +112,8 @@ impl AuthorizationEvidence {
 /// - [`BinanceErrorKind::Missing`]：缺少必需键
 /// - [`BinanceErrorKind::Invalid`]：空串或日期格式非法
 pub fn registered_evidence(raw: &str) -> BinanceResult<AuthorizationEvidence> {
-    let v: serde_json::Value = serde_json::from_str(raw).map_err(|e| {
-        BinanceError::new(
-            BinanceErrorKind::Invalid,
-            format!("证据工件 JSON 解析失败：{e}"),
-        )
-    })?;
+    let v: serde_json::Value = serde_json::from_str(raw)
+        .map_err(|_| BinanceError::new(BinanceErrorKind::Invalid, "证据工件 JSON 解析失败"))?;
 
     let obj = v
         .as_object()
@@ -167,20 +163,27 @@ pub fn registered_evidence(raw: &str) -> BinanceResult<AuthorizationEvidence> {
     let valid_until_str = get_str("valid_until")?;
 
     let parse_date = |s: &str| -> BinanceResult<Date> {
-        let parts: Vec<&str> = s.split('-').collect();
-        if parts.len() != 3 {
+        let bytes = s.as_bytes();
+        if bytes.len() != 10
+            || bytes[4] != b'-'
+            || bytes[7] != b'-'
+            || bytes
+                .iter()
+                .enumerate()
+                .any(|(index, byte)| !matches!(index, 4 | 7) && !byte.is_ascii_digit())
+        {
             return Err(BinanceError::new(
                 BinanceErrorKind::Invalid,
                 format!("日期 `{s}` 须为 YYYY-MM-DD"),
             ));
         }
-        let year: i32 = parts[0]
+        let year: i32 = s[0..4]
             .parse()
             .map_err(|_| BinanceError::new(BinanceErrorKind::Invalid, "日期年份非法"))?;
-        let month: u8 = parts[1]
+        let month: u8 = s[5..7]
             .parse()
             .map_err(|_| BinanceError::new(BinanceErrorKind::Invalid, "日期月份非法"))?;
-        let day: u8 = parts[2]
+        let day: u8 = s[8..10]
             .parse()
             .map_err(|_| BinanceError::new(BinanceErrorKind::Invalid, "日期天数非法"))?;
         Date::new(year, month, day)
@@ -192,7 +195,7 @@ pub fn registered_evidence(raw: &str) -> BinanceResult<AuthorizationEvidence> {
     if valid_from > valid_until {
         return Err(BinanceError::new(
             BinanceErrorKind::Invalid,
-            "valid_from > valid_until",
+            "有效期起始日期晚于结束日期",
         ));
     }
 

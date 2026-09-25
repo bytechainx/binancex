@@ -4,7 +4,6 @@
     clippy::panic,
     clippy::unreachable
 )]
-
 //! AI 提出的边界用例，经 Codex 按所列不变量逐条核对；内联数据均为合成。
 // AIDD: exponent_sign_does_not_change_zero | 来源=AI | 复核=Codex/2026-09-23 | 依据=Decimal 有效数字决定零与符号 | 结论=保留
 // AIDD: nested_unknown_field_rejects_complete_batch | 来源=AI | 复核=Codex/2026-09-23 | 依据=未知字段整批原子失败 | 结论=保留

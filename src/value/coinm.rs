@@ -231,69 +231,13 @@ pub struct CoinmTradeItem {
 /// 冻结合同中的完整响应。
 pub type CoinmTrade = Vec<CoinmTradeItem>;
 
-/// 冻结合同中的完整响应。
-pub type CoinmContinuousKline = Vec<(
-    i64,
-    String,
-    String,
-    String,
-    String,
-    String,
-    i64,
-    String,
-    i64,
-    String,
-    String,
-    String,
-)>;
+crate::value::typed_kline!(CoinmContinuousKline, "COIN-M 连续合约 K 线响应。");
 
-/// 冻结合同中的完整响应。
-pub type CoinmKline = Vec<(
-    i64,
-    String,
-    String,
-    String,
-    String,
-    String,
-    i64,
-    String,
-    i64,
-    String,
-    String,
-    String,
-)>;
+crate::value::typed_kline!(CoinmKline, "COIN-M 原生 K 线响应。");
 
-/// 冻结合同中的完整响应。
-pub type CoinmIndexPriceKline = Vec<(
-    i64,
-    String,
-    String,
-    String,
-    String,
-    String,
-    i64,
-    String,
-    i64,
-    String,
-    String,
-    String,
-)>;
+crate::value::typed_kline!(CoinmIndexPriceKline, "COIN-M 指数价格 K 线响应。");
 
-/// 冻结合同中的完整响应。
-pub type CoinmMarkPriceKline = Vec<(
-    i64,
-    String,
-    String,
-    String,
-    String,
-    String,
-    i64,
-    String,
-    i64,
-    String,
-    String,
-    String,
-)>;
+crate::value::typed_kline!(CoinmMarkPriceKline, "COIN-M 标记价格 K 线响应。");
 
 /// 冻结响应中的嵌套对象。
 #[doc(hidden)]
@@ -332,21 +276,7 @@ pub struct CoinmPremiumIndexItem {
 /// 冻结合同中的完整响应。
 pub type CoinmPremiumIndex = Vec<CoinmPremiumIndexItem>;
 
-/// 冻结合同中的完整响应。
-pub type CoinmPremiumIndexKline = Vec<(
-    i64,
-    String,
-    String,
-    String,
-    String,
-    String,
-    i64,
-    String,
-    i64,
-    String,
-    String,
-    String,
-)>;
+crate::value::typed_kline!(CoinmPremiumIndexKline, "COIN-M 溢价指数 K 线响应。");
 
 /// 冻结响应中的嵌套对象。
 #[doc(hidden)]
@@ -471,6 +401,33 @@ pub struct CoinmBookTickerItem {
 
 /// 冻结合同中的完整响应。
 pub type CoinmBookTicker = Vec<CoinmBookTickerItem>;
+
+/// COINM 冻结深度快照响应类型 CoinmBookSnapshot。
+#[derive(Debug, Clone, PartialEq, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CoinmBookSnapshot {
+    /// 原始响应字段 lastUpdateId；未提供时为 None。
+    #[serde(rename = "lastUpdateId")]
+    pub last_update_id: Option<i64>,
+    /// 原始响应字段 symbol；未提供时为 None。
+    #[serde(rename = "symbol")]
+    pub symbol: Option<String>,
+    /// 原始响应字段 pair；未提供时为 None。
+    #[serde(rename = "pair")]
+    pub pair: Option<String>,
+    /// 原始响应字段 E；未提供时为 None。
+    #[serde(rename = "E")]
+    pub e: Option<i64>,
+    /// 原始响应字段 T；未提供时为 None。
+    #[serde(rename = "T")]
+    pub t: Option<i64>,
+    /// 原始响应字段 bids；每档为价格与数量二元组。
+    #[serde(rename = "bids")]
+    pub bids: Option<Vec<(String, String)>>,
+    /// 原始响应字段 asks；每档为价格与数量二元组。
+    #[serde(rename = "asks")]
+    pub asks: Option<Vec<(String, String)>>,
+}
 
 /// 冻结响应中的嵌套对象。
 #[doc(hidden)]
