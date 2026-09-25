@@ -1,5 +1,7 @@
 //! 非 Kline 批内身份策略的合成负例。
 
+#![allow(clippy::unwrap_used)]
+
 use binancex::parse::spot::{parse_spot_agg_trade, parse_spot_trade};
 use binancex::BinanceErrorKind;
 
