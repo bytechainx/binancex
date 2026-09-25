@@ -101,7 +101,9 @@ pub fn parse_options_ticker(input: &str) -> BinanceResult<OptionsTicker> {
 ///
 /// 未知字段返回 `UnknownField`；非法 JSON 或响应形状返回 `Invalid`。
 pub fn parse_options_book_snapshot(input: &str) -> BinanceResult<OptionsBookSnapshot> {
-    crate::parse::deserialize_strict(input)
+    let response = crate::parse::deserialize_strict(input)?;
+    crate::parse::require_non_null_field(input, "lastUpdateId")?;
+    Ok(response)
 }
 
 #[cfg(test)]

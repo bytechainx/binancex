@@ -20,6 +20,27 @@ pub(crate) fn deserialize_strict<T: serde::de::DeserializeOwned>(input: &str) ->
     Ok(value)
 }
 
+/// 本地关键字段策略：确认对象成员既存在又非 null。
+///
+/// 调用方先用具体类型执行 `deserialize_strict`，保证未知字段和字段类型错误优先分类。
+pub(crate) fn require_non_null_field(input: &str, field: &str) -> BinanceResult<()> {
+    let value: serde_json::Value = serde_json::from_str(input).map_err(classify_error)?;
+    let object = value.as_object().ok_or_else(|| {
+        BinanceError::new(BinanceErrorKind::SchemaMismatch, "响应根节点必须是对象")
+    })?;
+    match object.get(field) {
+        None => Err(BinanceError::new(
+            BinanceErrorKind::Missing,
+            format!("响应缺少本地关键字段 {field}"),
+        )),
+        Some(serde_json::Value::Null) => Err(BinanceError::new(
+            BinanceErrorKind::SchemaMismatch,
+            format!("本地关键字段 {field} 不得为 null"),
+        )),
+        Some(_) => Ok(()),
+    }
+}
+
 /// serde 的原始错误仅用于分类，公开消息不含响应内容或英文诊断。
 fn classify_error(error: serde_json::Error) -> BinanceError {
     let detail = error.to_string();

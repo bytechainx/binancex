@@ -166,7 +166,9 @@ pub fn parse_usdm_open_interest_hist(input: &str) -> BinanceResult<UsdmOpenInter
 /// 未知字段返回 UnknownField；非法 JSON 返回 Invalid。
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
 pub fn parse_usdm_book_snapshot(input: &str) -> BinanceResult<UsdmBookSnapshot> {
-    deserialize_strict(input)
+    let response = deserialize_strict(input)?;
+    super::require_non_null_field(input, "lastUpdateId")?;
+    Ok(response)
 }
 
 /// 离线解析 UsdmBookTicker 的冻结响应结构。

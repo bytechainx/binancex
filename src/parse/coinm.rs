@@ -154,7 +154,9 @@ pub fn parse_coinm_book_ticker(input: &str) -> BinanceResult<CoinmBookTicker> {
 ///
 /// 未知字段返回 `UnknownField`；非法 JSON 或响应形状返回 `Invalid`。
 pub fn parse_coinm_book_snapshot(input: &str) -> BinanceResult<CoinmBookSnapshot> {
-    crate::parse::deserialize_strict(input)
+    let response = crate::parse::deserialize_strict(input)?;
+    crate::parse::require_non_null_field(input, "lastUpdateId")?;
+    Ok(response)
 }
 
 /// 解析 `CoinmTickerPrice` 的完整响应。

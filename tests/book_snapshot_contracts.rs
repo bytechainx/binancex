@@ -1,4 +1,4 @@
-//! 验证三类非 USDM 深度快照的冻结响应结构。
+//! 验证四族深度快照的冻结响应结构与本地同步游标策略。
 
 #![allow(clippy::unwrap_used)]
 
@@ -6,6 +6,7 @@
 // TDD-PROBE: parse::coinm::parse_coinm_book_snapshot | COINM 深度快照字段与档位 | 红=non_usdm_book_snapshots_preserve_depth_and_reject_unknown_fields | 绿=non_usdm_book_snapshots_preserve_depth_and_reject_unknown_fields
 // TDD-PROBE: parse::options::parse_options_book_snapshot | Options 深度快照字段与档位 | 红=non_usdm_book_snapshots_preserve_depth_and_reject_unknown_fields | 绿=non_usdm_book_snapshots_preserve_depth_and_reject_unknown_fields
 
+use binancex::parse::usdm;
 use binancex::parse::{coinm, options, spot};
 use binancex::BinanceErrorKind;
 
@@ -44,4 +45,41 @@ fn non_usdm_book_snapshots_preserve_depth_and_reject_unknown_fields() {
             .kind(),
         BinanceErrorKind::UnknownField
     );
+}
+
+#[test]
+fn all_book_snapshots_require_a_non_null_update_cursor() {
+    for kind in [
+        spot::parse_spot_book_snapshot(r#"{"bids":[],"asks":[]}"#)
+            .unwrap_err()
+            .kind(),
+        usdm::parse_usdm_book_snapshot(r#"{"bids":[],"asks":[]}"#)
+            .unwrap_err()
+            .kind(),
+        coinm::parse_coinm_book_snapshot(r#"{"bids":[],"asks":[]}"#)
+            .unwrap_err()
+            .kind(),
+        options::parse_options_book_snapshot(r#"{"bids":[],"asks":[]}"#)
+            .unwrap_err()
+            .kind(),
+    ] {
+        assert_eq!(kind, BinanceErrorKind::Missing);
+    }
+
+    for kind in [
+        spot::parse_spot_book_snapshot(r#"{"lastUpdateId":null}"#)
+            .unwrap_err()
+            .kind(),
+        usdm::parse_usdm_book_snapshot(r#"{"lastUpdateId":null}"#)
+            .unwrap_err()
+            .kind(),
+        coinm::parse_coinm_book_snapshot(r#"{"lastUpdateId":null}"#)
+            .unwrap_err()
+            .kind(),
+        options::parse_options_book_snapshot(r#"{"lastUpdateId":null}"#)
+            .unwrap_err()
+            .kind(),
+    ] {
+        assert_eq!(kind, BinanceErrorKind::SchemaMismatch);
+    }
 }

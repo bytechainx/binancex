@@ -333,7 +333,9 @@ pub fn parse_spot_book_ticker(input: &str) -> BinanceResult<SpotBookTicker> {
 ///
 /// 未知字段返回 `UnknownField`；JSON 语法错误返回 `Invalid`；结构、字段类型或档位形态错误返回 `SchemaMismatch`。
 pub fn parse_spot_book_snapshot(input: &str) -> BinanceResult<SpotBookSnapshot> {
-    deserialize_strict(input)
+    let response = deserialize_strict(input)?;
+    super::require_non_null_field(input, "lastUpdateId")?;
+    Ok(response)
 }
 
 /// 解析 `SpotTradingDay` 的冻结响应结构。
