@@ -746,9 +746,14 @@ fn identities_keep_route_and_market_separate() {
     assert_eq!(endpoint.method(), "GET");
     assert_eq!(endpoint.path(), "/fapi/v1/ticker/price");
     assert_eq!(endpoint.version(), "/fapi/v1");
+    let alternate_route = EndpointId::new("binance", "coinm", "GET", "/dapi/v1/klines", "/dapi/v1");
+    assert_ne!(endpoint, alternate_route);
     let instrument = Instrument::Symbol("SYNTH".into());
-    let series = DataSeriesId::new("spot", instrument.clone(), "1m", "trade-kline");
-    assert_eq!(series.market(), "spot");
+    let series = DataSeriesId::new("usdm", instrument.clone(), "1m", "trade-kline");
+    let equivalent_route_series =
+        DataSeriesId::new("usdm", instrument.clone(), "1m", "trade-kline");
+    assert_eq!(series, equivalent_route_series);
+    assert_eq!(series.market(), "usdm");
     assert_eq!(
         series.entity(),
         &binancex::DataSeriesEntity::Instrument(instrument)
