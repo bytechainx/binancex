@@ -16,15 +16,16 @@
 //!
 //! 本 crate 不提供 HTTP 客户端、不读凭据、不落存储。
 //! 采集契约归元仓库规格包（`specs/binancex/`），不随 crate 打包。
+//! production_decision = "NO-GO"；授权状态为 `unknown`，无 Owner 签核时授权判定保持拒绝。
 
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 #![deny(unreachable_pub)]
-#![warn(clippy::unwrap_used)]
-#![warn(clippy::expect_used)]
-#![warn(clippy::panic)]
-#![warn(clippy::todo)]
-#![warn(clippy::unimplemented)]
+#![deny(clippy::unwrap_used)]
+#![deny(clippy::expect_used)]
+#![deny(clippy::panic)]
+#![deny(clippy::todo)]
+#![deny(clippy::unimplemented)]
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
 pub mod authz;

@@ -1,4 +1,9 @@
-#![allow(clippy::unwrap_used, clippy::unreachable)]
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unreachable
+)]
 //! 三类测试中的 TDD 契约探针；内联响应全部是合成样本，不代表真实源证据。
 //! 主覆盖清单为 92 个入口：79 个族解析器与 13 个共享/值对象入口。
 // TDD-PROBE: parse::spot::parse_spot_exchange_info | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers

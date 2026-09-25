@@ -1,4 +1,9 @@
-#![allow(clippy::unwrap_used)]
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unreachable
+)]
 //! 标准章节与行为验收逐项映射；内联样本全部为合成。
 // SPEC-MAP: S-1 | 合成夹具 | synthetic_metadata_stays_outside_wire_payload
 // SPEC-MAP: S-2 | 冻结合同 | frozen_wire_names_and_nested_shapes_are_enforced
