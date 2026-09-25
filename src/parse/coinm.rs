@@ -203,7 +203,9 @@ pub fn parse_coinm_book_ticker(input: &str) -> BinanceResult<CoinmBookTicker> {
 ///
 /// # Errors
 ///
-/// 未知字段返回 `UnknownField`；非法 JSON 或响应形状返回 `Invalid`。
+/// 未知字段返回 `UnknownField`；非法 JSON 返回 `Invalid`；类型或响应形状错误返回
+/// `SchemaMismatch`；缺少 `lastUpdateId` 返回 `Missing`；游标为 `null` 或无法无损表示时
+/// 返回 `SchemaMismatch` 或 `LossyNumeric`。
 pub fn parse_coinm_book_snapshot(input: &str) -> BinanceResult<CoinmBookSnapshot> {
     let response = crate::parse::deserialize_strict(input)?;
     crate::parse::require_non_null_field(input, "lastUpdateId")?;
