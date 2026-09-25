@@ -12,7 +12,42 @@ pub mod time;
 pub mod usdm;
 pub mod whitelist;
 
-pub use identity::{DataSeriesId, EndpointId, Instrument, Subject};
+/// 一个冻结 K 线行；具体产品族和端点由外层名义类型区分。
+pub type KlineRow = (
+    i64,
+    String,
+    String,
+    String,
+    String,
+    String,
+    i64,
+    String,
+    i64,
+    String,
+    String,
+    String,
+);
+
+macro_rules! typed_kline {
+    ($name:ident, $documentation:literal) => {
+        #[doc = $documentation]
+        #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+        #[serde(transparent)]
+        pub struct $name(#[doc = "按冻结合同顺序排列的 K 线行。"] pub Vec<$crate::value::KlineRow>);
+
+        impl std::ops::Deref for $name {
+            type Target = [$crate::value::KlineRow];
+
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+    };
+}
+
+pub(crate) use typed_kline;
+
+pub use identity::{DataSeriesEntity, DataSeriesId, EndpointId, Instrument, Subject};
 pub use numeric::{Decimal, Quantity, QuantityUnit, Sign};
 pub use time::{Date, Interval, PitEligibility, TimePrecision};
 pub use whitelist::WhitelistSnapshot;

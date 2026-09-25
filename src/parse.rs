@@ -307,13 +307,33 @@ pub struct WhitelistObservation<'a> {
 ///
 /// # Errors
 ///
-/// - [`BinanceErrorKind::Invalid`]：`family` 为空或 `raw` 非合法 JSON
+/// - [`BinanceErrorKind::Invalid`]：`family` 为空、未登记，或输入不是合法 JSON
+/// - 具体产品族解析器报告的结构、未知字段或数值错误
 pub fn parse_exchange_info(obs: WhitelistObservation<'_>) -> BinanceResult<WhitelistSnapshot> {
     if obs.family.is_empty() {
         return Err(BinanceError::new(BinanceErrorKind::Invalid, "family 为空"));
     }
-    // raw 须为合法 JSON（不深校验结构——结构合同归 response-structures.json）
-    let _: serde_json::Value = serde_json::from_str(obs.raw).map_err(classify_error)?;
+    // 先按已登记产品族执行严格解析，避免仅有合法 JSON 语法就生成可信快照。
+    match obs.family {
+        "spot" => {
+            crate::parse::spot::parse_spot_exchange_info(obs.raw)?;
+        }
+        "usdm" => {
+            crate::parse::usdm::parse_usdm_exchange_info(obs.raw)?;
+        }
+        "coinm" => {
+            crate::parse::coinm::parse_coinm_exchange_info(obs.raw)?;
+        }
+        "options" => {
+            crate::parse::options::parse_options_exchange_info(obs.raw)?;
+        }
+        _ => {
+            return Err(BinanceError::new(
+                BinanceErrorKind::Invalid,
+                "family 未登记",
+            ));
+        }
+    }
     use sha2::{Digest, Sha256};
     let sha = Sha256::digest(obs.raw.as_bytes());
     Ok(WhitelistSnapshot {
@@ -475,8 +495,14 @@ mod tests {
 
     #[test]
     fn strict_objects_preserve_forms_fixed_tuples_and_decimal_strings() {
-        // 冻结合同将 assets 元素暂记为空字段对象，须保留该显式例外。
-        assert!(usdm::parse_usdm_insurance_balance(r#"{"assets":[{}]}"#).is_ok());
+        // 全部元素字段在官方 schema 中均非必需，但已登记字段对象不得为空。
+        assert!(usdm::parse_usdm_insurance_balance(r#"{"assets":[{"asset":"USDT"}]}"#).is_ok());
+        assert_eq!(
+            usdm::parse_usdm_insurance_balance(r#"{"assets":[{}]}"#)
+                .unwrap_err()
+                .kind(),
+            BinanceErrorKind::SchemaMismatch
+        );
         assert!(usdm::parse_usdm_insurance_balance(r#"{"assets":[[]]}"#).is_err());
         assert_eq!(
             usdm::parse_usdm_insurance_balance(r#"{"assets":[{"futureField":1}]}"#)

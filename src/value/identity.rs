@@ -75,7 +75,7 @@ impl fmt::Display for EndpointId {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DataSeriesId {
     actual_market_family: String,
-    instrument: Instrument,
+    entity: DataSeriesEntity,
     variant: String,
 }
 
@@ -84,12 +84,12 @@ impl DataSeriesId {
     #[must_use]
     pub fn new(
         actual_market_family: impl Into<String>,
-        instrument: Instrument,
+        entity: impl Into<DataSeriesEntity>,
         variant: impl Into<String>,
     ) -> Self {
         Self {
             actual_market_family: actual_market_family.into(),
-            instrument,
+            entity: entity.into(),
             variant: variant.into(),
         }
     }
@@ -102,8 +102,35 @@ impl DataSeriesId {
 
     /// 标的。
     #[must_use]
-    pub fn instrument(&self) -> &Instrument {
-        &self.instrument
+    pub fn entity(&self) -> &DataSeriesEntity {
+        &self.entity
+    }
+}
+
+/// 序列业务身份主体。
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum DataSeriesEntity {
+    /// 交易标的。
+    Instrument(Instrument),
+    /// 合约对。
+    Pair(String),
+    /// 期权或指数所用 underlying。
+    Underlying(String),
+    /// 到期日。
+    Expiry(String),
+    /// 无 symbol 的公开全局主体。
+    Subject(Subject),
+}
+
+impl From<Instrument> for DataSeriesEntity {
+    fn from(value: Instrument) -> Self {
+        Self::Instrument(value)
+    }
+}
+
+impl From<Subject> for DataSeriesEntity {
+    fn from(value: Subject) -> Self {
+        Self::Subject(value)
     }
 }
 

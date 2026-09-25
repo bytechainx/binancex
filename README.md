@@ -22,7 +22,7 @@ binancex = { git = "https://github.com/bytechainx/binancex", version = "0.1.0" }
 ```rust
 use binancex::parse::spot::parse_spot_ticker_price;
 use binancex::value::spot::SpotTickerPrice;
-use binancex::{current_authorization, BinanceResult, Date, Quantity, QuantityUnit, Sign};
+use binancex::{current_authorization, BinanceResult, Date, Decimal, Quantity, QuantityUnit, Sign};
 
 fn main() -> BinanceResult<()> {
     let parsed = parse_spot_ticker_price(r#"{"symbol":"BTCUSDT","price":"123.4500"}"#)?;
@@ -33,7 +33,7 @@ fn main() -> BinanceResult<()> {
         SpotTickerPrice::Array(_) => unreachable!(),
     }
 
-    let quantity = Quantity::new("-0.2500", QuantityUnit::BaseAsset)?;
+    let quantity = Quantity::new(Decimal::new("-0.2500")?, QuantityUnit::BaseAsset);
     assert_eq!(quantity.value().as_str(), "-0.2500");
     assert_eq!(quantity.sign(), Sign::Negative);
 

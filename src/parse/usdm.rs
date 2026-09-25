@@ -54,7 +54,7 @@ pub fn parse_usdm_trade(input: &str) -> BinanceResult<UsdmTrade> {
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
 /// 批内开盘时间重复返回 IdentityConflict，整批失败。
 pub fn parse_usdm_continuous_kline(input: &str) -> BinanceResult<UsdmContinuousKline> {
-    parse_kline_rows(input)
+    parse_kline_rows(input).map(UsdmContinuousKline)
 }
 
 /// 离线解析 UsdmKline 的冻结响应结构。
@@ -65,7 +65,7 @@ pub fn parse_usdm_continuous_kline(input: &str) -> BinanceResult<UsdmContinuousK
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
 /// 批内开盘时间重复返回 IdentityConflict，整批失败。
 pub fn parse_usdm_kline(input: &str) -> BinanceResult<UsdmKline> {
-    parse_kline_rows(input)
+    parse_kline_rows(input).map(UsdmKline)
 }
 
 /// 离线解析 UsdmIndexPriceKline 的冻结响应结构。
@@ -76,7 +76,7 @@ pub fn parse_usdm_kline(input: &str) -> BinanceResult<UsdmKline> {
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
 /// 批内开盘时间重复返回 IdentityConflict，整批失败。
 pub fn parse_usdm_index_price_kline(input: &str) -> BinanceResult<UsdmIndexPriceKline> {
-    parse_kline_rows(input)
+    parse_kline_rows(input).map(UsdmIndexPriceKline)
 }
 
 /// 离线解析 UsdmMarkPriceKline 的冻结响应结构。
@@ -87,7 +87,7 @@ pub fn parse_usdm_index_price_kline(input: &str) -> BinanceResult<UsdmIndexPrice
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
 /// 批内开盘时间重复返回 IdentityConflict，整批失败。
 pub fn parse_usdm_mark_price_kline(input: &str) -> BinanceResult<UsdmMarkPriceKline> {
-    parse_kline_rows(input)
+    parse_kline_rows(input).map(UsdmMarkPriceKline)
 }
 
 /// 离线解析 UsdmPremiumIndex 的冻结响应结构。
@@ -116,7 +116,7 @@ pub fn parse_usdm_premium_index(input: &str) -> BinanceResult<UsdmPremiumIndex> 
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
 /// 批内开盘时间重复返回 IdentityConflict，整批失败。
 pub fn parse_usdm_premium_index_kline(input: &str) -> BinanceResult<UsdmPremiumIndexKline> {
-    parse_kline_rows(input)
+    parse_kline_rows(input).map(UsdmPremiumIndexKline)
 }
 
 /// 离线解析 UsdmFundingRate 的冻结响应结构。
@@ -426,8 +426,8 @@ pub fn parse_usdm_adl_risk(input: &str) -> BinanceResult<UsdmAdlRisk> {
 }
 
 // 五种 K 线共用同形元组，位置 0 为合同声明的开盘时间身份。
-fn parse_kline_rows(input: &str) -> BinanceResult<UsdmKline> {
-    let rows: UsdmKline = deserialize_strict(input)?;
+fn parse_kline_rows(input: &str) -> BinanceResult<Vec<crate::value::KlineRow>> {
+    let rows: Vec<crate::value::KlineRow> = deserialize_strict(input)?;
     let mut open_times = std::collections::HashSet::new();
     if rows.iter().any(|row| !open_times.insert(row.0)) {
         return Err(BinanceError::new(
@@ -477,12 +477,13 @@ mod tests {
         let first = r#"[1,"1","1","1","1","1",2,"1",1,"1","1","0"]"#;
         let different_values = r#"[1,"9","9","9","9","9",3,"9",9,"9","9","0"]"#;
         let second = r#"[2,"1","1","1","1","1",3,"1",1,"1","1","0"]"#;
-        let parsers: [fn(&str) -> BinanceResult<UsdmKline>; 5] = [
-            parse_usdm_continuous_kline,
-            parse_usdm_kline,
-            parse_usdm_index_price_kline,
-            parse_usdm_mark_price_kline,
-            parse_usdm_premium_index_kline,
+        type KlineParser = fn(&str) -> BinanceResult<Vec<crate::value::KlineRow>>;
+        let parsers: [KlineParser; 5] = [
+            |input| parse_usdm_continuous_kline(input).map(|rows| rows.0),
+            |input| parse_usdm_kline(input).map(|rows| rows.0),
+            |input| parse_usdm_index_price_kline(input).map(|rows| rows.0),
+            |input| parse_usdm_mark_price_kline(input).map(|rows| rows.0),
+            |input| parse_usdm_premium_index_kline(input).map(|rows| rows.0),
         ];
         for parse in parsers {
             let error = parse(&format!("[{first},{different_values}]")).unwrap_err();

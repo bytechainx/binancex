@@ -1,5 +1,6 @@
+#![allow(clippy::unwrap_used, clippy::unreachable)]
 //! 三类测试中的 TDD 契约探针；内联响应全部是合成样本，不代表真实源证据。
-//! 主覆盖清单为 77 个入口：76 个族解析器与 `value::validate_decimal`；另保留共享内核探针。
+//! 主覆盖清单为 92 个入口：79 个族解析器与 13 个共享/值对象入口。
 // TDD-PROBE: parse::spot::parse_spot_exchange_info | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
 // TDD-PROBE: parse::spot::parse_spot_execution_rules | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
 // TDD-PROBE: parse::spot::parse_spot_agg_trade | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
@@ -12,9 +13,10 @@
 // TDD-PROBE: parse::spot::parse_spot_ticker24hr | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
 // TDD-PROBE: parse::spot::parse_spot_ticker_price | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
 // TDD-PROBE: parse::spot::parse_spot_book_ticker | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
+// TDD-PROBE: parse::spot::parse_spot_book_snapshot | 变异：误拒 tuple 深度或放行未知字段 | 红=spot_public_parsers | 绿=spot_public_parsers
 // TDD-PROBE: parse::spot::parse_spot_trading_day | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
-// TDD-PROBE: parse::spot::parse_spot_reference_price | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
-// TDD-PROBE: parse::spot::parse_spot_reference_price_calculation | 变异：绕过结构校验或误拒合法响应 | 红=spot_public_parsers | 绿=spot_public_parsers
+// TDD-PROBE: parse::spot::parse_spot_reference_price | 变异：未知字段放行 | 红=forms_preserve_object_and_array_unknown_field_errors | 绿=forms_preserve_object_and_array_unknown_field_errors
+// TDD-PROBE: parse::spot::parse_spot_reference_price_calculation | 变异：未知字段放行 | 红=forms_preserve_object_and_array_unknown_field_errors | 绿=forms_preserve_object_and_array_unknown_field_errors
 // TDD-PROBE: parse::usdm::parse_usdm_exchange_info | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
 // TDD-PROBE: parse::usdm::parse_usdm_index_info | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
 // TDD-PROBE: parse::usdm::parse_usdm_agg_trade | 变异：绕过结构校验或误拒合法响应 | 红=usdm_public_parsers | 绿=usdm_public_parsers
@@ -59,6 +61,7 @@
 // TDD-PROBE: parse::coinm::parse_coinm_open_interest | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
 // TDD-PROBE: parse::coinm::parse_coinm_open_interest_hist | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
 // TDD-PROBE: parse::coinm::parse_coinm_book_ticker | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
+// TDD-PROBE: parse::coinm::parse_coinm_book_snapshot | 变异：误拒 tuple 深度或放行未知字段 | 红=coinm_public_parsers | 绿=coinm_public_parsers
 // TDD-PROBE: parse::coinm::parse_coinm_ticker_price | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
 // TDD-PROBE: parse::coinm::parse_coinm_ticker24hr | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
 // TDD-PROBE: parse::coinm::parse_coinm_taker_buy_sell_vol | 变异：绕过结构校验或误拒合法响应 | 红=coinm_public_parsers | 绿=coinm_public_parsers
@@ -76,6 +79,7 @@
 // TDD-PROBE: parse::options::parse_options_block_trade | 变异：绕过结构校验或误拒合法响应 | 红=options_public_parsers | 绿=options_public_parsers
 // TDD-PROBE: parse::options::parse_options_trade | 变异：绕过结构校验或误拒合法响应 | 红=options_public_parsers | 绿=options_public_parsers
 // TDD-PROBE: parse::options::parse_options_ticker | 变异：绕过结构校验或误拒合法响应 | 红=options_public_parsers | 绿=options_public_parsers
+// TDD-PROBE: parse::options::parse_options_book_snapshot | 变异：误拒 tuple 深度或放行未知字段 | 红=options_public_parsers | 绿=options_public_parsers
 // TDD-PROBE: parse::parse_exchange_info | 变异：快照哈希恒空 | 红=whitelist_snapshot_preserves_provenance | 绿=whitelist_snapshot_preserves_provenance
 // TDD-PROBE: parse::find_unknown_fields | 变异：漏报未登记键 | 红=unknown_field_helpers_are_atomic | 绿=unknown_field_helpers_are_atomic
 // TDD-PROBE: parse::reject_unknown_fields | 变异：未知字段放行 | 红=unknown_field_helpers_are_atomic | 绿=unknown_field_helpers_are_atomic
@@ -190,9 +194,16 @@ fn spot_public_parsers() {
     probe!(parse_spot_ticker24hr, r#"{"symbol":"1"}"#);
     probe!(parse_spot_ticker_price, r#"{"symbol":"1"}"#);
     probe!(parse_spot_book_ticker, r#"{"symbol":"1"}"#);
+    probe!(
+        parse_spot_book_snapshot,
+        r#"{"lastUpdateId":1,"bids":[["1","2"]],"asks":[]}"#
+    );
     probe!(parse_spot_trading_day, r#"{"symbol":"1"}"#);
     probe!(parse_spot_reference_price, r#"{"symbol":"1"}"#);
-    probe!(parse_spot_reference_price_calculation, r#"{"symbol":"1"}"#);
+    probe!(
+        parse_spot_reference_price_calculation,
+        r#"{"symbol":"1","calculationType":"EXTERNAL","externalCalculationId":1}"#
+    );
 }
 
 #[test]
@@ -287,6 +298,10 @@ fn coinm_public_parsers() {
     probe!(parse_coinm_open_interest, r#"{"symbol":"1"}"#);
     probe!(parse_coinm_open_interest_hist, r#"[{"pair":"1"}]"#);
     probe!(parse_coinm_book_ticker, r#"[{"lastUpdateId":1}]"#);
+    probe!(
+        parse_coinm_book_snapshot,
+        r#"{"lastUpdateId":1,"bids":[["1","2"]],"asks":[]}"#
+    );
     probe!(parse_coinm_ticker_price, r#"[{"symbol":"1"}]"#);
     probe!(parse_coinm_ticker24hr, r#"[{"symbol":"1"}]"#);
     probe!(parse_coinm_taker_buy_sell_vol, r#"[{"pair":"1"}]"#);
@@ -320,6 +335,10 @@ fn options_public_parsers() {
     probe!(parse_options_block_trade, r#"[{"id":1}]"#);
     probe!(parse_options_trade, r#"[{"id":1}]"#);
     probe!(parse_options_ticker, r#"[{"symbol":"1"}]"#);
+    probe!(
+        parse_options_book_snapshot,
+        r#"{"lastUpdateId":1,"bids":[["1","2"]],"asks":[]}"#
+    );
 }
 
 #[test]
@@ -399,24 +418,37 @@ fn forms_preserve_object_and_array_unknown_field_errors() {
             .kind(),
         BinanceErrorKind::UnknownField
     );
+    assert_eq!(
+        parse_spot_reference_price(r#"{"symbol":"SYNTH","newField":1}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
+    );
+    assert_eq!(
+        parse_spot_reference_price_calculation(r#"{"symbol":"SYNTH","newField":1}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
+    );
 }
 
 #[test]
 fn twelve_kline_entries_reject_duplicate_identity_and_wrong_lengths() {
     // 合同证据只覆盖这十二类；不对 SpotUiKline 自行推断唯一身份。
-    let parsers: [fn(&str) -> binancex::BinanceResult<binancex::value::spot::SpotKline>; 12] = [
-        parse_spot_kline,
-        parse_usdm_continuous_kline,
-        parse_usdm_kline,
-        parse_usdm_index_price_kline,
-        parse_usdm_mark_price_kline,
-        parse_usdm_premium_index_kline,
-        parse_coinm_continuous_kline,
-        parse_coinm_kline,
-        parse_coinm_index_price_kline,
-        parse_coinm_mark_price_kline,
-        parse_coinm_premium_index_kline,
-        parse_options_kline,
+    type KlineParser = fn(&str) -> binancex::BinanceResult<Vec<binancex::value::KlineRow>>;
+    let parsers: [KlineParser; 12] = [
+        |input| parse_spot_kline(input).map(|rows| rows.0),
+        |input| parse_usdm_continuous_kline(input).map(|rows| rows.0),
+        |input| parse_usdm_kline(input).map(|rows| rows.0),
+        |input| parse_usdm_index_price_kline(input).map(|rows| rows.0),
+        |input| parse_usdm_mark_price_kline(input).map(|rows| rows.0),
+        |input| parse_usdm_premium_index_kline(input).map(|rows| rows.0),
+        |input| parse_coinm_continuous_kline(input).map(|rows| rows.0),
+        |input| parse_coinm_kline(input).map(|rows| rows.0),
+        |input| parse_coinm_index_price_kline(input).map(|rows| rows.0),
+        |input| parse_coinm_mark_price_kline(input).map(|rows| rows.0),
+        |input| parse_coinm_premium_index_kline(input).map(|rows| rows.0),
+        |input| parse_options_kline(input).map(|rows| rows.0),
     ];
     let first = json!([1, "1", "1", "1", "1", "1", 2, "1", 1, "1", "1", "0"]);
     let changed_same_time = json!([1, "9", "9", "9", "9", "9", 3, "9", 9, "9", "9", "0"]);
@@ -511,14 +543,14 @@ fn public_decimal_validator_checks_complete_lexemes() {
 
 #[test]
 fn quantity_preserves_sign_and_unit() {
-    let negative = Quantity::new("-3.25", QuantityUnit::Contracts).unwrap();
+    let negative = Quantity::new(Decimal::new("-3.25").unwrap(), QuantityUnit::Contracts);
     assert_eq!(negative.value().as_str(), "-3.25");
     assert_eq!(negative.unit(), QuantityUnit::Contracts);
     assert_eq!(negative.sign(), Sign::Negative);
-    let zero = Quantity::new("-0", QuantityUnit::QuoteAsset).unwrap();
+    let zero = Quantity::new(Decimal::new("-0").unwrap(), QuantityUnit::QuoteAsset);
     assert_eq!(zero.value().as_str(), "-0");
     assert_eq!(zero.sign(), Sign::Zero);
-    assert!(Quantity::new("not-a-number", QuantityUnit::BaseAsset).is_err());
+    assert!(Decimal::new("not-a-number").is_err());
 }
 
 #[test]
@@ -717,7 +749,10 @@ fn identities_keep_route_and_market_separate() {
     let instrument = Instrument::Symbol("SYNTH".into());
     let series = DataSeriesId::new("spot", instrument.clone(), "native");
     assert_eq!(series.market(), "spot");
-    assert_eq!(series.instrument(), &instrument);
+    assert_eq!(
+        series.entity(),
+        &binancex::DataSeriesEntity::Instrument(instrument)
+    );
 }
 
 #[test]

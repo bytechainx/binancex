@@ -39,7 +39,7 @@ pub fn parse_options_index(input: &str) -> BinanceResult<OptionsIndex> {
 /// 开盘时间重复返回 `IdentityConflict`，整批原子失败；
 /// JSON、字段类型或根形态错误返回 `Invalid`。
 pub fn parse_options_kline(input: &str) -> BinanceResult<OptionsKline> {
-    let rows: OptionsKline = crate::parse::deserialize_strict(input)?;
+    let rows: Vec<crate::value::KlineRow> = crate::parse::deserialize_strict(input)?;
     let mut open_times = HashSet::new();
     if rows.iter().any(|row| !open_times.insert(row.0)) {
         return Err(BinanceError::new(
@@ -47,7 +47,7 @@ pub fn parse_options_kline(input: &str) -> BinanceResult<OptionsKline> {
             "Options Kline 批内开盘时间重复",
         ));
     }
-    Ok(rows)
+    Ok(OptionsKline(rows))
 }
 
 /// 解析 `OptionsOpenInterest` 冻结响应。
@@ -92,6 +92,15 @@ pub fn parse_options_trade(input: &str) -> BinanceResult<OptionsTrade> {
 ///
 /// 未知字段返回 `UnknownField`；JSON、字段类型或根形态错误返回 `Invalid`。
 pub fn parse_options_ticker(input: &str) -> BinanceResult<OptionsTicker> {
+    crate::parse::deserialize_strict(input)
+}
+
+/// 离线解析 `OptionsBookSnapshot` 的冻结深度快照结构。
+///
+/// # Errors
+///
+/// 未知字段返回 `UnknownField`；非法 JSON 或响应形状返回 `Invalid`。
+pub fn parse_options_book_snapshot(input: &str) -> BinanceResult<OptionsBookSnapshot> {
     crate::parse::deserialize_strict(input)
 }
 

@@ -41,7 +41,7 @@ pub fn parse_coinm_trade(input: &str) -> BinanceResult<CoinmTrade> {
 /// 未知字段返回 `UnknownField`；非法 JSON 或响应形状返回 `Invalid`。
 /// 批内开盘时间重复返回 `IdentityConflict`，整批失败。
 pub fn parse_coinm_continuous_kline(input: &str) -> BinanceResult<CoinmContinuousKline> {
-    parse_coinm_kline(input)
+    parse_coinm_kline(input).map(|rows| CoinmContinuousKline(rows.0))
 }
 
 /// 解析 `CoinmKline` 的完整响应。
@@ -51,7 +51,7 @@ pub fn parse_coinm_continuous_kline(input: &str) -> BinanceResult<CoinmContinuou
 /// 未知字段返回 `UnknownField`；非法 JSON 或响应形状返回 `Invalid`。
 /// 批内开盘时间重复返回 `IdentityConflict`，整批失败。
 pub fn parse_coinm_kline(input: &str) -> BinanceResult<CoinmKline> {
-    let rows: CoinmKline = crate::parse::deserialize_strict(input)?;
+    let rows: Vec<crate::value::KlineRow> = crate::parse::deserialize_strict(input)?;
     let mut open_times = std::collections::HashSet::new();
     for row in &rows {
         if !open_times.insert(row.0) {
@@ -61,7 +61,7 @@ pub fn parse_coinm_kline(input: &str) -> BinanceResult<CoinmKline> {
             ));
         }
     }
-    Ok(rows)
+    Ok(CoinmKline(rows))
 }
 
 /// 解析 `CoinmIndexPriceKline` 的完整响应。
@@ -71,7 +71,7 @@ pub fn parse_coinm_kline(input: &str) -> BinanceResult<CoinmKline> {
 /// 未知字段返回 `UnknownField`；非法 JSON 或响应形状返回 `Invalid`。
 /// 批内开盘时间重复返回 `IdentityConflict`，整批失败。
 pub fn parse_coinm_index_price_kline(input: &str) -> BinanceResult<CoinmIndexPriceKline> {
-    parse_coinm_kline(input)
+    parse_coinm_kline(input).map(|rows| CoinmIndexPriceKline(rows.0))
 }
 
 /// 解析 `CoinmMarkPriceKline` 的完整响应。
@@ -81,7 +81,7 @@ pub fn parse_coinm_index_price_kline(input: &str) -> BinanceResult<CoinmIndexPri
 /// 未知字段返回 `UnknownField`；非法 JSON 或响应形状返回 `Invalid`。
 /// 批内开盘时间重复返回 `IdentityConflict`，整批失败。
 pub fn parse_coinm_mark_price_kline(input: &str) -> BinanceResult<CoinmMarkPriceKline> {
-    parse_coinm_kline(input)
+    parse_coinm_kline(input).map(|rows| CoinmMarkPriceKline(rows.0))
 }
 
 /// 解析 `CoinmPremiumIndex` 的完整响应。
@@ -100,7 +100,7 @@ pub fn parse_coinm_premium_index(input: &str) -> BinanceResult<CoinmPremiumIndex
 /// 未知字段返回 `UnknownField`；非法 JSON 或响应形状返回 `Invalid`。
 /// 批内开盘时间重复返回 `IdentityConflict`，整批失败。
 pub fn parse_coinm_premium_index_kline(input: &str) -> BinanceResult<CoinmPremiumIndexKline> {
-    parse_coinm_kline(input)
+    parse_coinm_kline(input).map(|rows| CoinmPremiumIndexKline(rows.0))
 }
 
 /// 解析 `CoinmFundingRate` 的完整响应。
@@ -145,6 +145,15 @@ pub fn parse_coinm_open_interest_hist(input: &str) -> BinanceResult<CoinmOpenInt
 ///
 /// 未知字段返回 `UnknownField`；非法 JSON 或响应形状返回 `Invalid`。
 pub fn parse_coinm_book_ticker(input: &str) -> BinanceResult<CoinmBookTicker> {
+    crate::parse::deserialize_strict(input)
+}
+
+/// 解析 `CoinmBookSnapshot` 的完整响应。
+///
+/// # Errors
+///
+/// 未知字段返回 `UnknownField`；非法 JSON 或响应形状返回 `Invalid`。
+pub fn parse_coinm_book_snapshot(input: &str) -> BinanceResult<CoinmBookSnapshot> {
     crate::parse::deserialize_strict(input)
 }
 
@@ -237,12 +246,13 @@ mod tests {
         let second = r#"[3,"1","2","0","1","3",4,"3",1,"1","1","0"]"#;
         let unique = format!("[{first},{second}]");
         let duplicate = format!("[{first},{second},{first}]");
-        let parsers: [fn(&str) -> BinanceResult<CoinmKline>; 5] = [
-            parse_coinm_continuous_kline,
-            parse_coinm_kline,
-            parse_coinm_index_price_kline,
-            parse_coinm_mark_price_kline,
-            parse_coinm_premium_index_kline,
+        type KlineParser = fn(&str) -> BinanceResult<Vec<crate::value::KlineRow>>;
+        let parsers: [KlineParser; 5] = [
+            |input| parse_coinm_continuous_kline(input).map(|rows| rows.0),
+            |input| parse_coinm_kline(input).map(|rows| rows.0),
+            |input| parse_coinm_index_price_kline(input).map(|rows| rows.0),
+            |input| parse_coinm_mark_price_kline(input).map(|rows| rows.0),
+            |input| parse_coinm_premium_index_kline(input).map(|rows| rows.0),
         ];
         for parse in parsers {
             let rows = parse(&unique).expect("不同开盘时间应成功");
