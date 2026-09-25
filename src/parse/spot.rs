@@ -34,6 +34,7 @@ fn reject_explicit_nulls(input: &str) -> BinanceResult<()> {
 pub fn parse_spot_exchange_info(input: &str) -> BinanceResult<SpotExchangeInfo> {
     let response: SpotExchangeInfo = deserialize_strict(input)?;
     reject_explicit_nulls(input)?;
+    validate_exchange_info_filters(&response)?;
     validate_unique_nested_string_ids(
         input,
         "symbols",
@@ -45,7 +46,6 @@ pub fn parse_spot_exchange_info(input: &str) -> BinanceResult<SpotExchangeInfo> 
         "symbol",
         "Spot exchangeInfo 标的",
     )?;
-    validate_exchange_info_filters(&response)?;
     Ok(response)
 }
 

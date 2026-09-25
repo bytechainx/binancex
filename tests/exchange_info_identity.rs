@@ -10,6 +10,26 @@ use binancex::BinanceErrorKind;
 
 #[test]
 fn spot_exchange_info_requires_unique_symbol_per_list() {
+    assert!(parse_spot_exchange_info(r#"{"timezone":"UTC"}"#).is_ok());
+    assert!(parse_spot_exchange_info(r#"{"symbols":[]}"#).is_ok());
+    assert_eq!(
+        parse_spot_exchange_info(r#"{"symbols":null}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_spot_exchange_info(r#"{"symbols":"invalid"}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_spot_exchange_info(r#"{"symbols":[{"unknown":1}]}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
+    );
     assert!(parse_spot_exchange_info(r#"{"symbols":[{"symbol":"S1"},{"symbol":"S2"}]}"#).is_ok());
     assert_eq!(
         parse_spot_exchange_info(r#"{"symbols":[{"symbol":"S1"},{"symbol":"S1"}]}"#)
@@ -29,10 +49,31 @@ fn spot_exchange_info_requires_unique_symbol_per_list() {
             .kind(),
         BinanceErrorKind::SchemaMismatch
     );
+    assert_eq!(
+        parse_spot_exchange_info(r#"{"symbols":[{"symbol":""}]}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
 }
 
 #[test]
 fn usdm_exchange_info_requires_unique_symbol_per_list() {
+    assert!(parse_usdm_exchange_info(r#"{"timezone":"UTC"}"#).is_ok());
+    assert!(parse_usdm_exchange_info(r#"{"symbols":[]}"#).is_ok());
+    assert!(parse_usdm_exchange_info(r#"{"symbols":null}"#).is_ok());
+    assert_eq!(
+        parse_usdm_exchange_info(r#"{"symbols":"invalid"}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_usdm_exchange_info(r#"{"symbols":[{"unknown":1}]}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
+    );
     assert!(parse_usdm_exchange_info(r#"{"symbols":[{"symbol":"S1"},{"symbol":"S2"}]}"#).is_ok());
     assert_eq!(
         parse_usdm_exchange_info(r#"{"symbols":[{"symbol":"S1"},{"symbol":"S1"}]}"#)
@@ -52,10 +93,31 @@ fn usdm_exchange_info_requires_unique_symbol_per_list() {
             .kind(),
         BinanceErrorKind::SchemaMismatch
     );
+    assert_eq!(
+        parse_usdm_exchange_info(r#"{"symbols":[{"symbol":""}]}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
 }
 
 #[test]
 fn coinm_exchange_info_requires_unique_symbol_per_list() {
+    assert!(parse_coinm_exchange_info(r#"{"serverTime":1}"#).is_ok());
+    assert!(parse_coinm_exchange_info(r#"{"symbols":[]}"#).is_ok());
+    assert!(parse_coinm_exchange_info(r#"{"symbols":null}"#).is_ok());
+    assert_eq!(
+        parse_coinm_exchange_info(r#"{"symbols":"invalid"}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_coinm_exchange_info(r#"{"symbols":[{"unknown":1}]}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
+    );
     assert!(parse_coinm_exchange_info(r#"{"symbols":[{"symbol":"S1"},{"symbol":"S2"}]}"#).is_ok());
     assert_eq!(
         parse_coinm_exchange_info(r#"{"symbols":[{"symbol":"S1"},{"symbol":"S1"}]}"#)
@@ -75,10 +137,31 @@ fn coinm_exchange_info_requires_unique_symbol_per_list() {
             .kind(),
         BinanceErrorKind::SchemaMismatch
     );
+    assert_eq!(
+        parse_coinm_exchange_info(r#"{"symbols":[{"symbol":""}]}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
 }
 
 #[test]
 fn options_exchange_info_requires_unique_symbol_per_list() {
+    assert!(parse_options_exchange_info(r#"{"timezone":"UTC"}"#).is_ok());
+    assert!(parse_options_exchange_info(r#"{"optionSymbols":[]}"#).is_ok());
+    assert!(parse_options_exchange_info(r#"{"optionSymbols":null}"#).is_ok());
+    assert_eq!(
+        parse_options_exchange_info(r#"{"optionSymbols":"invalid"}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_options_exchange_info(r#"{"optionSymbols":[{"unknown":1}]}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::UnknownField
+    );
     assert!(
         parse_options_exchange_info(r#"{"optionSymbols":[{"symbol":"S1"},{"symbol":"S2"}]}"#)
             .is_ok()
@@ -97,6 +180,12 @@ fn options_exchange_info_requires_unique_symbol_per_list() {
     );
     assert_eq!(
         parse_options_exchange_info(r#"{"optionSymbols":[{"symbol":null}]}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+    assert_eq!(
+        parse_options_exchange_info(r#"{"optionSymbols":[{"symbol":""}]}"#)
             .unwrap_err()
             .kind(),
         BinanceErrorKind::SchemaMismatch

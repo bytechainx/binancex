@@ -130,6 +130,12 @@ pub(crate) fn validate_unique_nested_string_ids(
                 format!("{label}本地关键字段 {field} 无法读取"),
             )
         })?;
+        if id.is_empty() {
+            return Err(BinanceError::new(
+                BinanceErrorKind::SchemaMismatch,
+                format!("{label}本地关键字段 {field} 不得为空字符串"),
+            ));
+        }
         if !seen.insert(id) {
             return Err(BinanceError::new(
                 BinanceErrorKind::IdentityConflict,

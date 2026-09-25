@@ -122,7 +122,7 @@ fn spot_exchange_info_filter_fields_match_official_definitions() {
         r#"{"symbols":[{"symbol":"BTCUSDT","filters":[{"filterType":"PRICE_FILTER","maxNumOrders":1}]}]}"#,
         r#"{"symbols":[{"symbol":"BTCUSDT","filters":[{"filterType":"T_PLUS_SELL","endTime":"1750000000000"}]}]}"#,
         r#"{"exchangeFilters":[{"filterType":"EXCHANGE_MAX_NUM_ORDERS","maxNumAlgoOrders":1}]}"#,
-        r#"{"symbols":[{"symbol":"BTCUSDT","filters":[{"filterType":"UNSEEN_FILTER"}]}]}"#,
+        r#"{"symbols":[{"filters":[{"filterType":"UNSEEN_FILTER"}]}]}"#,
         r#"{"exchangeFilters":[{"maxNumOrders":1}]}"#,
     ] {
         assert_eq!(
