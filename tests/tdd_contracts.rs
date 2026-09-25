@@ -735,25 +735,20 @@ fn calendar_and_interval_validate_boundaries() {
 
 #[test]
 fn identities_keep_route_and_market_separate() {
-    let endpoint = EndpointId::new(
-        "binance",
-        "usdm",
-        "GET",
-        "/fapi/v1/ticker/price",
-        "/fapi/v1",
-    );
+    let endpoint = EndpointId::new("binance", "usdm", "GET", "/fapi/v1/klines", "/fapi/v1");
     assert_eq!(endpoint.family(), "usdm");
     assert_eq!(endpoint.method(), "GET");
-    assert_eq!(endpoint.path(), "/fapi/v1/ticker/price");
+    assert_eq!(endpoint.path(), "/fapi/v1/klines");
     assert_eq!(endpoint.version(), "/fapi/v1");
     let alternate_route = EndpointId::new("binance", "coinm", "GET", "/dapi/v1/klines", "/dapi/v1");
     assert_ne!(endpoint, alternate_route);
     let instrument = Instrument::Symbol("SYNTH".into());
-    let series = DataSeriesId::new("usdm", instrument.clone(), "1m", "trade-kline");
+    // 合成等价路由样例，只验证来源字段不参与业务身份。
+    let series = DataSeriesId::new("synthetic-market", instrument.clone(), "1m", "trade-kline");
     let equivalent_route_series =
-        DataSeriesId::new("usdm", instrument.clone(), "1m", "trade-kline");
+        DataSeriesId::new("synthetic-market", instrument.clone(), "1m", "trade-kline");
     assert_eq!(series, equivalent_route_series);
-    assert_eq!(series.market(), "usdm");
+    assert_eq!(series.market(), "synthetic-market");
     assert_eq!(
         series.entity(),
         &binancex::DataSeriesEntity::Instrument(instrument)
