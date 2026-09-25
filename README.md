@@ -10,7 +10,7 @@ Binance 公开 REST 数据的 Rust 类型层，提供 Spot、USDM、COINM、Opti
 
 ```toml
 [dependencies]
-binancex = { git = "https://github.com/bytechainx/binancex", version = "0.1.0" }
+binancex = { git = "https://github.com/bytechainx/binancex", version = "0.2.0" }
 ```
 
 当前 `rust-version = "1.77"`，依赖图推导见 [CONTEXT.md](CONTEXT.md)。
