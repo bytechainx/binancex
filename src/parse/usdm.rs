@@ -2,7 +2,7 @@
 //!
 //! forms 入口先确定 JSON 根形态，再反序列化具体结构，以保留未知字段错误类别。
 
-use super::{deserialize_strict, validate_unique_response_ids};
+use super::{deserialize_strict, validate_unique_nested_string_ids, validate_unique_response_ids};
 use crate::error::{BinanceError, BinanceErrorKind, BinanceResult};
 use crate::value::usdm::*;
 
@@ -13,7 +13,19 @@ use crate::value::usdm::*;
 /// 未知字段返回 UnknownField；非法 JSON 返回 Invalid。
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
 pub fn parse_usdm_exchange_info(input: &str) -> BinanceResult<UsdmExchangeInfo> {
-    deserialize_strict(input)
+    let response: UsdmExchangeInfo = deserialize_strict(input)?;
+    validate_unique_nested_string_ids(
+        input,
+        "symbols",
+        response
+            .symbols
+            .iter()
+            .flatten()
+            .map(|item| item.symbol.clone()),
+        "symbol",
+        "USDM exchangeInfo 标的",
+    )?;
+    Ok(response)
 }
 
 /// 离线解析 UsdmIndexInfo 的冻结响应结构。

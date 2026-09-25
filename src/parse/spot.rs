@@ -6,7 +6,7 @@ use crate::error::{BinanceError, BinanceErrorKind, BinanceResult};
 use crate::value::spot::*;
 use std::collections::HashSet;
 
-use super::{deserialize_strict, validate_unique_response_ids};
+use super::{deserialize_strict, validate_unique_nested_string_ids, validate_unique_response_ids};
 
 fn reject_explicit_nulls(input: &str) -> BinanceResult<()> {
     fn contains_null(value: &serde_json::Value) -> bool {
@@ -34,6 +34,17 @@ fn reject_explicit_nulls(input: &str) -> BinanceResult<()> {
 pub fn parse_spot_exchange_info(input: &str) -> BinanceResult<SpotExchangeInfo> {
     let response: SpotExchangeInfo = deserialize_strict(input)?;
     reject_explicit_nulls(input)?;
+    validate_unique_nested_string_ids(
+        input,
+        "symbols",
+        response
+            .symbols
+            .iter()
+            .flatten()
+            .map(|item| item.symbol.clone()),
+        "symbol",
+        "Spot exchangeInfo 标的",
+    )?;
     validate_exchange_info_filters(&response)?;
     Ok(response)
 }

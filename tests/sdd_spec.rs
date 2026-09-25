@@ -71,6 +71,7 @@ fn usdm_convert_from_is_base_accepts_optional_boolean_only() {
 fn spot_exchange_info_filter_fields_match_official_definitions() {
     let response = json!({
         "symbols": [{
+            "symbol": "BTCUSDT",
             "filters": [
                 {"filterType":"PRICE_FILTER","priceExponent":8,"minPrice":"0","maxPrice":"1","tickSize":"0.1"},
                 {"filterType":"PERCENT_PRICE","multiplierUp":"1.3","multiplierDown":"0.7","avgPriceMins":5},
@@ -118,10 +119,10 @@ fn spot_exchange_info_filter_fields_match_official_definitions() {
         BinanceErrorKind::UnknownField
     );
     for raw in [
-        r#"{"symbols":[{"filters":[{"filterType":"PRICE_FILTER","maxNumOrders":1}]}]}"#,
-        r#"{"symbols":[{"filters":[{"filterType":"T_PLUS_SELL","endTime":"1750000000000"}]}]}"#,
+        r#"{"symbols":[{"symbol":"BTCUSDT","filters":[{"filterType":"PRICE_FILTER","maxNumOrders":1}]}]}"#,
+        r#"{"symbols":[{"symbol":"BTCUSDT","filters":[{"filterType":"T_PLUS_SELL","endTime":"1750000000000"}]}]}"#,
         r#"{"exchangeFilters":[{"filterType":"EXCHANGE_MAX_NUM_ORDERS","maxNumAlgoOrders":1}]}"#,
-        r#"{"symbols":[{"filters":[{"filterType":"UNSEEN_FILTER"}]}]}"#,
+        r#"{"symbols":[{"symbol":"BTCUSDT","filters":[{"filterType":"UNSEEN_FILTER"}]}]}"#,
         r#"{"exchangeFilters":[{"maxNumOrders":1}]}"#,
     ] {
         assert_eq!(
@@ -130,7 +131,7 @@ fn spot_exchange_info_filter_fields_match_official_definitions() {
         );
     }
     assert!(parse_spot_exchange_info(
-        r#"{"symbols":[{"filters":[{"filterType":"T_PLUS_SELL"}]}]}"#
+        r#"{"symbols":[{"symbol":"BTCUSDT","filters":[{"filterType":"T_PLUS_SELL"}]}]}"#
     )
     .is_ok());
 }
@@ -139,7 +140,7 @@ fn spot_exchange_info_filter_fields_match_official_definitions() {
 fn usdm_exchange_info_filter_union_accepts_documented_mixed_sample() {
     // 合成夹具：保持官方 Exchange Information 示例中的混合字段组合可解析。
     let parsed = parse_usdm_exchange_info(
-        r#"{"symbols":[{"filters":[{"filterType":"PRICE_FILTER","maxPrice":"300","minPrice":"0.0001","tickSize":"0.0001","maxQty":"10000000","minQty":"1","stepSize":"1","limit":200,"notional":"5.0","multiplierUp":"1.1500","multiplierDown":"0.8500","multiplierDecimal":"4"}]}]}"#,
+        r#"{"symbols":[{"symbol":"BTCUSDT","filters":[{"filterType":"PRICE_FILTER","maxPrice":"300","minPrice":"0.0001","tickSize":"0.0001","maxQty":"10000000","minQty":"1","stepSize":"1","limit":200,"notional":"5.0","multiplierUp":"1.1500","multiplierDown":"0.8500","multiplierDecimal":"4"}]}]}"#,
     )
     .unwrap();
     let filter = &parsed.symbols.as_ref().unwrap()[0]

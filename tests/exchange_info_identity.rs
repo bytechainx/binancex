@@ -1,0 +1,104 @@
+//! 四族 exchangeInfo 标的键策略的合成负例。
+
+#![allow(clippy::unwrap_used)]
+
+use binancex::parse::{
+    coinm::parse_coinm_exchange_info, options::parse_options_exchange_info,
+    spot::parse_spot_exchange_info, usdm::parse_usdm_exchange_info,
+};
+use binancex::BinanceErrorKind;
+
+#[test]
+fn spot_exchange_info_requires_unique_symbol_per_list() {
+    assert!(parse_spot_exchange_info(r#"{"symbols":[{"symbol":"S1"},{"symbol":"S2"}]}"#).is_ok());
+    assert_eq!(
+        parse_spot_exchange_info(r#"{"symbols":[{"symbol":"S1"},{"symbol":"S1"}]}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_spot_exchange_info(r#"{"symbols":[{"status":"TRADING"}]}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_spot_exchange_info(r#"{"symbols":[{"symbol":null}]}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+}
+
+#[test]
+fn usdm_exchange_info_requires_unique_symbol_per_list() {
+    assert!(parse_usdm_exchange_info(r#"{"symbols":[{"symbol":"S1"},{"symbol":"S2"}]}"#).is_ok());
+    assert_eq!(
+        parse_usdm_exchange_info(r#"{"symbols":[{"symbol":"S1"},{"symbol":"S1"}]}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_usdm_exchange_info(r#"{"symbols":[{"status":"TRADING"}]}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_usdm_exchange_info(r#"{"symbols":[{"symbol":null}]}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+}
+
+#[test]
+fn coinm_exchange_info_requires_unique_symbol_per_list() {
+    assert!(parse_coinm_exchange_info(r#"{"symbols":[{"symbol":"S1"},{"symbol":"S2"}]}"#).is_ok());
+    assert_eq!(
+        parse_coinm_exchange_info(r#"{"symbols":[{"symbol":"S1"},{"symbol":"S1"}]}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_coinm_exchange_info(r#"{"symbols":[{"pair":"BTCUSD"}]}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_coinm_exchange_info(r#"{"symbols":[{"symbol":null}]}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+}
+
+#[test]
+fn options_exchange_info_requires_unique_symbol_per_list() {
+    assert!(
+        parse_options_exchange_info(r#"{"optionSymbols":[{"symbol":"S1"},{"symbol":"S2"}]}"#)
+            .is_ok()
+    );
+    assert_eq!(
+        parse_options_exchange_info(r#"{"optionSymbols":[{"symbol":"S1"},{"symbol":"S1"}]}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::IdentityConflict
+    );
+    assert_eq!(
+        parse_options_exchange_info(r#"{"optionSymbols":[{"status":"TRADING"}]}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::Missing
+    );
+    assert_eq!(
+        parse_options_exchange_info(r#"{"optionSymbols":[{"symbol":null}]}"#)
+            .unwrap_err()
+            .kind(),
+        BinanceErrorKind::SchemaMismatch
+    );
+}

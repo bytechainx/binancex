@@ -3,6 +3,7 @@
 use std::collections::HashSet;
 
 use crate::error::{BinanceError, BinanceErrorKind, BinanceResult};
+use crate::parse::{deserialize_strict, validate_unique_nested_string_ids};
 use crate::value::options::*;
 
 /// 解析 `OptionsExchangeInfo` 冻结响应。
@@ -11,7 +12,19 @@ use crate::value::options::*;
 ///
 /// 未知字段返回 `UnknownField`；JSON、字段类型或根形态错误返回 `Invalid`。
 pub fn parse_options_exchange_info(input: &str) -> BinanceResult<OptionsExchangeInfo> {
-    crate::parse::deserialize_strict(input)
+    let response: OptionsExchangeInfo = deserialize_strict(input)?;
+    validate_unique_nested_string_ids(
+        input,
+        "optionSymbols",
+        response
+            .option_symbols
+            .iter()
+            .flatten()
+            .map(|item| item.symbol.clone()),
+        "symbol",
+        "Options exchangeInfo 标的",
+    )?;
+    Ok(response)
 }
 
 /// 解析 `OptionsExerciseHistory` 冻结响应。

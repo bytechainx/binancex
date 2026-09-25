@@ -5,7 +5,9 @@
 #![forbid(unsafe_code)]
 
 use crate::error::BinanceResult;
-use crate::parse::{deserialize_strict, validate_unique_response_ids};
+use crate::parse::{
+    deserialize_strict, validate_unique_nested_string_ids, validate_unique_response_ids,
+};
 use crate::value::coinm::*;
 
 /// 解析 `CoinmExchangeInfo` 的完整响应。
@@ -14,7 +16,19 @@ use crate::value::coinm::*;
 ///
 /// 未知字段返回 `UnknownField`；非法 JSON 或响应形状返回 `Invalid`。
 pub fn parse_coinm_exchange_info(input: &str) -> BinanceResult<CoinmExchangeInfo> {
-    crate::parse::deserialize_strict(input)
+    let response: CoinmExchangeInfo = deserialize_strict(input)?;
+    validate_unique_nested_string_ids(
+        input,
+        "symbols",
+        response
+            .symbols
+            .iter()
+            .flatten()
+            .map(|item| item.symbol.clone()),
+        "symbol",
+        "COINM exchangeInfo 标的",
+    )?;
+    Ok(response)
 }
 
 /// 解析 `CoinmAggTrade` 的完整响应。

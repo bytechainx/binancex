@@ -90,6 +90,56 @@ pub(crate) fn validate_unique_response_ids(
     Ok(())
 }
 
+/// 校验存在的嵌套数组中，本地要求的字符串身份字段非空且唯一。
+///
+/// 调用方先用具体类型执行 `deserialize_strict`；字段集合缺失时不强制数组存在。
+pub(crate) fn validate_unique_nested_string_ids(
+    input: &str,
+    collection: &str,
+    ids: impl IntoIterator<Item = Option<String>>,
+    field: &str,
+    label: &str,
+) -> BinanceResult<()> {
+    let raw: serde_json::Value = serde_json::from_str(input).map_err(classify_error)?;
+    let object = raw.as_object().ok_or_else(|| {
+        BinanceError::new(BinanceErrorKind::SchemaMismatch, "响应根节点必须是对象")
+    })?;
+    let Some(rows) = object.get(collection).and_then(serde_json::Value::as_array) else {
+        return Ok(());
+    };
+    let mut seen = std::collections::HashSet::new();
+    for (id, row) in ids.into_iter().zip(rows) {
+        match row.get(field) {
+            None => {
+                return Err(BinanceError::new(
+                    BinanceErrorKind::Missing,
+                    format!("{label}缺少本地关键字段 {field}"),
+                ));
+            }
+            Some(serde_json::Value::Null) => {
+                return Err(BinanceError::new(
+                    BinanceErrorKind::SchemaMismatch,
+                    format!("{label}本地关键字段 {field} 不得为 null"),
+                ));
+            }
+            Some(_) => {}
+        }
+        let id = id.ok_or_else(|| {
+            BinanceError::new(
+                BinanceErrorKind::SchemaMismatch,
+                format!("{label}本地关键字段 {field} 无法读取"),
+            )
+        })?;
+        if !seen.insert(id) {
+            return Err(BinanceError::new(
+                BinanceErrorKind::IdentityConflict,
+                format!("{label}列表中存在重复标识字段 {field}"),
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// serde 的原始错误仅用于分类，公开消息不含响应内容或英文诊断。
 fn classify_error(error: serde_json::Error) -> BinanceError {
     let detail = error.to_string();
