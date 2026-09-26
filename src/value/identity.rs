@@ -70,13 +70,14 @@ impl fmt::Display for EndpointId {
 
 /// 数据系列身份（业务身份，不含 `EndpointId`）。
 ///
-/// `DataSeriesId = actual_market_family + Instrument/Subject + variant + 语义维度`。
+/// `DataSeriesId = actual_market_family + Instrument/Subject + 原生变体 + 语义维度`。
 /// 同一业务事实经两条已证明等价路由时，业务身份唯一，来源关系保留两份。
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DataSeriesId {
     actual_market_family: String,
-    instrument: Instrument,
+    entity: DataSeriesEntity,
     variant: String,
+    semantic_dimension: String,
 }
 
 impl DataSeriesId {
@@ -84,13 +85,15 @@ impl DataSeriesId {
     #[must_use]
     pub fn new(
         actual_market_family: impl Into<String>,
-        instrument: Instrument,
+        entity: impl Into<DataSeriesEntity>,
         variant: impl Into<String>,
+        semantic_dimension: impl Into<String>,
     ) -> Self {
         Self {
             actual_market_family: actual_market_family.into(),
-            instrument,
+            entity: entity.into(),
             variant: variant.into(),
+            semantic_dimension: semantic_dimension.into(),
         }
     }
 
@@ -102,8 +105,47 @@ impl DataSeriesId {
 
     /// 标的。
     #[must_use]
-    pub fn instrument(&self) -> &Instrument {
-        &self.instrument
+    pub fn entity(&self) -> &DataSeriesEntity {
+        &self.entity
+    }
+
+    /// 原生离散变体。
+    #[must_use]
+    pub fn variant(&self) -> &str {
+        &self.variant
+    }
+
+    /// 序列语义维度；例如区分 Spot klines 与 uiKlines。
+    #[must_use]
+    pub fn semantic_dimension(&self) -> &str {
+        &self.semantic_dimension
+    }
+}
+
+/// 序列业务身份主体。
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum DataSeriesEntity {
+    /// 交易标的。
+    Instrument(Instrument),
+    /// 合约对。
+    Pair(String),
+    /// 期权或指数所用 underlying。
+    Underlying(String),
+    /// 到期日。
+    Expiry(String),
+    /// 无 symbol 的公开全局主体。
+    Subject(Subject),
+}
+
+impl From<Instrument> for DataSeriesEntity {
+    fn from(value: Instrument) -> Self {
+        Self::Instrument(value)
+    }
+}
+
+impl From<Subject> for DataSeriesEntity {
+    fn from(value: Subject) -> Self {
+        Self::Subject(value)
     }
 }
 

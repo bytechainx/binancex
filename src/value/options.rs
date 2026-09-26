@@ -22,21 +22,10 @@ pub type OptionsTrade = Vec<OptionsTradeItem>;
 /// 期权二十四小时行情响应。
 pub type OptionsTicker = Vec<OptionsTickerItem>;
 
-/// 期权 K 线响应，每行严格保留冻结合同的十二个位置。
-pub type OptionsKline = Vec<(
-    i64,
-    String,
-    String,
-    String,
-    String,
-    String,
-    i64,
-    String,
-    i64,
-    String,
-    String,
-    String,
-)>;
+crate::value::typed_kline!(
+    OptionsKline,
+    "期权 K 线响应，每行严格保留冻结合同的十二个位置。"
+);
 
 /// 期权交易所信息。
 #[derive(Debug, Clone, serde::Deserialize)]
@@ -425,4 +414,22 @@ pub struct OptionsTickerItem {
     /// 源字段 `exercisePrice`。
     #[serde(rename = "exercisePrice")]
     pub exercise_price: Option<String>,
+}
+
+/// Options 冻结深度快照响应类型 OptionsBookSnapshot。
+#[derive(Debug, Clone, PartialEq, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct OptionsBookSnapshot {
+    /// 原始响应字段 bids；每档为价格与数量二元组。
+    #[serde(rename = "bids")]
+    pub bids: Option<Vec<(String, String)>>,
+    /// 原始响应字段 asks；每档为价格与数量二元组。
+    #[serde(rename = "asks")]
+    pub asks: Option<Vec<(String, String)>>,
+    /// 原始响应字段 T；未提供时为 None。
+    #[serde(rename = "T")]
+    pub t: Option<i64>,
+    /// 原始响应字段 lastUpdateId；未提供时为 None。
+    #[serde(rename = "lastUpdateId")]
+    pub last_update_id: Option<i64>,
 }

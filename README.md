@@ -10,7 +10,7 @@ Binance 公开 REST 数据的 Rust 类型层，提供 Spot、USDM、COINM、Opti
 
 ```toml
 [dependencies]
-binancex = { git = "https://github.com/bytechainx/binancex", version = "0.1.0" }
+binancex = { git = "https://github.com/bytechainx/binancex", version = "0.2.0" }
 ```
 
 当前 `rust-version = "1.77"`，依赖图推导见 [CONTEXT.md](CONTEXT.md)。
@@ -22,7 +22,7 @@ binancex = { git = "https://github.com/bytechainx/binancex", version = "0.1.0" }
 ```rust
 use binancex::parse::spot::parse_spot_ticker_price;
 use binancex::value::spot::SpotTickerPrice;
-use binancex::{current_authorization, BinanceResult, Date, Quantity, QuantityUnit, Sign};
+use binancex::{current_authorization, BinanceResult, Date, Decimal, Quantity, QuantityUnit, Sign};
 
 fn main() -> BinanceResult<()> {
     let parsed = parse_spot_ticker_price(r#"{"symbol":"BTCUSDT","price":"123.4500"}"#)?;
@@ -33,7 +33,7 @@ fn main() -> BinanceResult<()> {
         SpotTickerPrice::Array(_) => unreachable!(),
     }
 
-    let quantity = Quantity::new("-0.2500", QuantityUnit::BaseAsset)?;
+    let quantity = Quantity::new(Decimal::new("-0.2500")?, QuantityUnit::BaseAsset);
     assert_eq!(quantity.value().as_str(), "-0.2500");
     assert_eq!(quantity.sign(), Sign::Negative);
 

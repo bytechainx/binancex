@@ -2,6 +2,7 @@
 //!
 //! 本 crate 是纯类型层：值对象、离线解析、fail-closed 授权判定。
 //! 不做联网采集、认证、缓存、存储、单位换算或派生指标。
+//! `production_decision = NO-GO`：解析成功及库内授权判定均不构成 live 采集或生产接入许可。
 //!
 //! ## 模块
 //!
@@ -37,6 +38,6 @@ pub use authz::{
 };
 pub use error::{BinanceError, BinanceErrorKind, BinanceResult};
 pub use value::{
-    DataSeriesId, Date, Decimal, EndpointId, Interval, PitEligibility, Quantity, QuantityUnit,
-    Sign, TimePrecision, WhitelistSnapshot,
+    DataSeriesEntity, DataSeriesId, Date, Decimal, EndpointId, Instrument, Interval,
+    PitEligibility, Quantity, QuantityUnit, Sign, Subject, TimePrecision, WhitelistSnapshot,
 };

@@ -2,7 +2,11 @@
 //!
 //! forms 入口先确定 JSON 根形态，再反序列化具体结构，以保留未知字段错误类别。
 
-use super::deserialize_strict;
+use super::{
+    deserialize_strict, validate_unique_nested_string_ids,
+    validate_unique_response_funding_rate_ids, validate_unique_response_ids,
+    validate_unique_response_string_ids, validate_unique_response_string_keys_and_times,
+};
 use crate::error::{BinanceError, BinanceErrorKind, BinanceResult};
 use crate::value::usdm::*;
 
@@ -13,7 +17,19 @@ use crate::value::usdm::*;
 /// 未知字段返回 UnknownField；非法 JSON 返回 Invalid。
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
 pub fn parse_usdm_exchange_info(input: &str) -> BinanceResult<UsdmExchangeInfo> {
-    deserialize_strict(input)
+    let response: UsdmExchangeInfo = deserialize_strict(input)?;
+    validate_unique_nested_string_ids(
+        input,
+        "symbols",
+        response
+            .symbols
+            .iter()
+            .flatten()
+            .map(|item| item.symbol.clone()),
+        "symbol",
+        "USDM exchangeInfo 标的",
+    )?;
+    Ok(response)
 }
 
 /// 离线解析 UsdmIndexInfo 的冻结响应结构。
@@ -32,8 +48,16 @@ pub fn parse_usdm_index_info(input: &str) -> BinanceResult<UsdmIndexInfo> {
 ///
 /// 未知字段返回 UnknownField；非法 JSON 返回 Invalid。
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
+/// 本地要求 `a`，同一响应批内缺失或重复分别返回 Missing 或 IdentityConflict。
 pub fn parse_usdm_agg_trade(input: &str) -> BinanceResult<UsdmAggTrade> {
-    deserialize_strict(input)
+    let response: UsdmAggTrade = deserialize_strict(input)?;
+    validate_unique_response_ids(
+        input,
+        response.iter().map(|item| item.a),
+        "a",
+        "USDM 聚合成交",
+    )?;
+    Ok(response)
 }
 
 /// 离线解析 UsdmTrade 的冻结响应结构。
@@ -42,8 +66,16 @@ pub fn parse_usdm_agg_trade(input: &str) -> BinanceResult<UsdmAggTrade> {
 ///
 /// 未知字段返回 UnknownField；非法 JSON 返回 Invalid。
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
+/// 本地要求 `id`，同一响应批内缺失或重复分别返回 Missing 或 IdentityConflict。
 pub fn parse_usdm_trade(input: &str) -> BinanceResult<UsdmTrade> {
-    deserialize_strict(input)
+    let response: UsdmTrade = deserialize_strict(input)?;
+    validate_unique_response_ids(
+        input,
+        response.iter().map(|item| item.id),
+        "id",
+        "USDM 成交",
+    )?;
+    Ok(response)
 }
 
 /// 离线解析 UsdmContinuousKline 的冻结响应结构。
@@ -54,7 +86,7 @@ pub fn parse_usdm_trade(input: &str) -> BinanceResult<UsdmTrade> {
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
 /// 批内开盘时间重复返回 IdentityConflict，整批失败。
 pub fn parse_usdm_continuous_kline(input: &str) -> BinanceResult<UsdmContinuousKline> {
-    parse_kline_rows(input)
+    parse_kline_rows(input).map(UsdmContinuousKline)
 }
 
 /// 离线解析 UsdmKline 的冻结响应结构。
@@ -65,7 +97,7 @@ pub fn parse_usdm_continuous_kline(input: &str) -> BinanceResult<UsdmContinuousK
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
 /// 批内开盘时间重复返回 IdentityConflict，整批失败。
 pub fn parse_usdm_kline(input: &str) -> BinanceResult<UsdmKline> {
-    parse_kline_rows(input)
+    parse_kline_rows(input).map(UsdmKline)
 }
 
 /// 离线解析 UsdmIndexPriceKline 的冻结响应结构。
@@ -76,7 +108,7 @@ pub fn parse_usdm_kline(input: &str) -> BinanceResult<UsdmKline> {
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
 /// 批内开盘时间重复返回 IdentityConflict，整批失败。
 pub fn parse_usdm_index_price_kline(input: &str) -> BinanceResult<UsdmIndexPriceKline> {
-    parse_kline_rows(input)
+    parse_kline_rows(input).map(UsdmIndexPriceKline)
 }
 
 /// 离线解析 UsdmMarkPriceKline 的冻结响应结构。
@@ -87,7 +119,7 @@ pub fn parse_usdm_index_price_kline(input: &str) -> BinanceResult<UsdmIndexPrice
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
 /// 批内开盘时间重复返回 IdentityConflict，整批失败。
 pub fn parse_usdm_mark_price_kline(input: &str) -> BinanceResult<UsdmMarkPriceKline> {
-    parse_kline_rows(input)
+    parse_kline_rows(input).map(UsdmMarkPriceKline)
 }
 
 /// 离线解析 UsdmPremiumIndex 的冻结响应结构。
@@ -116,7 +148,7 @@ pub fn parse_usdm_premium_index(input: &str) -> BinanceResult<UsdmPremiumIndex> 
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
 /// 批内开盘时间重复返回 IdentityConflict，整批失败。
 pub fn parse_usdm_premium_index_kline(input: &str) -> BinanceResult<UsdmPremiumIndexKline> {
-    parse_kline_rows(input)
+    parse_kline_rows(input).map(UsdmPremiumIndexKline)
 }
 
 /// 离线解析 UsdmFundingRate 的冻结响应结构。
@@ -125,8 +157,21 @@ pub fn parse_usdm_premium_index_kline(input: &str) -> BinanceResult<UsdmPremiumI
 ///
 /// 未知字段返回 UnknownField；非法 JSON 返回 Invalid。
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
+/// 本地要求 `symbol` 与 `fundingTime`，缺失返回 Missing，null 或空白 symbol 返回 SchemaMismatch；
+/// `rateType` 可缺省，用于区分常规与特殊费率；同批重复三元组返回 IdentityConflict。
 pub fn parse_usdm_funding_rate(input: &str) -> BinanceResult<UsdmFundingRate> {
-    deserialize_strict(input)
+    let response: UsdmFundingRate = deserialize_strict(input)?;
+    validate_unique_response_funding_rate_ids(
+        input,
+        response.iter().map(|item| {
+            (
+                item.symbol.clone(),
+                item.funding_time,
+                item.rate_type.clone(),
+            )
+        }),
+    )?;
+    Ok(response)
 }
 
 /// 离线解析 UsdmFundingInfo 的冻结响应结构。
@@ -136,7 +181,14 @@ pub fn parse_usdm_funding_rate(input: &str) -> BinanceResult<UsdmFundingRate> {
 /// 未知字段返回 UnknownField；非法 JSON 返回 Invalid。
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
 pub fn parse_usdm_funding_info(input: &str) -> BinanceResult<UsdmFundingInfo> {
-    deserialize_strict(input)
+    let response: UsdmFundingInfo = deserialize_strict(input)?;
+    validate_unique_response_string_ids(
+        input,
+        response.iter().map(|item| item.symbol.clone()),
+        "symbol",
+        "USDM 资金费率配置",
+    )?;
+    Ok(response)
 }
 
 /// 离线解析 UsdmOpenInterest 的冻结响应结构。
@@ -146,7 +198,20 @@ pub fn parse_usdm_funding_info(input: &str) -> BinanceResult<UsdmFundingInfo> {
 /// 未知字段返回 UnknownField；非法 JSON 返回 Invalid。
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
 pub fn parse_usdm_open_interest(input: &str) -> BinanceResult<UsdmOpenInterest> {
-    deserialize_strict(input)
+    let response: UsdmOpenInterest = deserialize_strict(input)?;
+    super::require_non_null_field(input, "symbol")?;
+    super::require_non_null_field(input, "time")?;
+    if response
+        .symbol
+        .as_deref()
+        .is_some_and(|symbol| symbol.trim().is_empty())
+    {
+        return Err(BinanceError::new(
+            BinanceErrorKind::SchemaMismatch,
+            "USDM 未平仓量响应本地关键字段 symbol 不得为空",
+        ));
+    }
+    Ok(response)
 }
 
 /// 离线解析 UsdmOpenInterestHist 的冻结响应结构。
@@ -156,7 +221,17 @@ pub fn parse_usdm_open_interest(input: &str) -> BinanceResult<UsdmOpenInterest> 
 /// 未知字段返回 UnknownField；非法 JSON 返回 Invalid。
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
 pub fn parse_usdm_open_interest_hist(input: &str) -> BinanceResult<UsdmOpenInterestHist> {
-    deserialize_strict(input)
+    let response: UsdmOpenInterestHist = deserialize_strict(input)?;
+    validate_unique_response_string_keys_and_times(
+        input,
+        response
+            .iter()
+            .map(|item| (vec![item.symbol.clone()], item.timestamp)),
+        &["symbol"],
+        "timestamp",
+        "USDM 持仓量历史",
+    )?;
+    Ok(response)
 }
 
 /// 离线解析 UsdmBookSnapshot 的冻结响应结构。
@@ -166,7 +241,9 @@ pub fn parse_usdm_open_interest_hist(input: &str) -> BinanceResult<UsdmOpenInter
 /// 未知字段返回 UnknownField；非法 JSON 返回 Invalid。
 /// 响应结构或字段类型不符返回 SchemaMismatch；数值无法无损承载返回 LossyNumeric。
 pub fn parse_usdm_book_snapshot(input: &str) -> BinanceResult<UsdmBookSnapshot> {
-    deserialize_strict(input)
+    let response = deserialize_strict(input)?;
+    super::require_non_null_field(input, "lastUpdateId")?;
+    Ok(response)
 }
 
 /// 离线解析 UsdmBookTicker 的冻结响应结构。
@@ -426,8 +503,8 @@ pub fn parse_usdm_adl_risk(input: &str) -> BinanceResult<UsdmAdlRisk> {
 }
 
 // 五种 K 线共用同形元组，位置 0 为合同声明的开盘时间身份。
-fn parse_kline_rows(input: &str) -> BinanceResult<UsdmKline> {
-    let rows: UsdmKline = deserialize_strict(input)?;
+fn parse_kline_rows(input: &str) -> BinanceResult<Vec<crate::value::KlineRow>> {
+    let rows: Vec<crate::value::KlineRow> = deserialize_strict(input)?;
     let mut open_times = std::collections::HashSet::new();
     if rows.iter().any(|row| !open_times.insert(row.0)) {
         return Err(BinanceError::new(
@@ -477,12 +554,13 @@ mod tests {
         let first = r#"[1,"1","1","1","1","1",2,"1",1,"1","1","0"]"#;
         let different_values = r#"[1,"9","9","9","9","9",3,"9",9,"9","9","0"]"#;
         let second = r#"[2,"1","1","1","1","1",3,"1",1,"1","1","0"]"#;
-        let parsers: [fn(&str) -> BinanceResult<UsdmKline>; 5] = [
-            parse_usdm_continuous_kline,
-            parse_usdm_kline,
-            parse_usdm_index_price_kline,
-            parse_usdm_mark_price_kline,
-            parse_usdm_premium_index_kline,
+        type KlineParser = fn(&str) -> BinanceResult<Vec<crate::value::KlineRow>>;
+        let parsers: [KlineParser; 5] = [
+            |input| parse_usdm_continuous_kline(input).map(|rows| rows.0),
+            |input| parse_usdm_kline(input).map(|rows| rows.0),
+            |input| parse_usdm_index_price_kline(input).map(|rows| rows.0),
+            |input| parse_usdm_mark_price_kline(input).map(|rows| rows.0),
+            |input| parse_usdm_premium_index_kline(input).map(|rows| rows.0),
         ];
         for parse in parsers {
             let error = parse(&format!("[{first},{different_values}]")).unwrap_err();

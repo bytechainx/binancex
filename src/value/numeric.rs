@@ -119,6 +119,15 @@ impl<'de> serde::Deserialize<'de> for Decimal {
     }
 }
 
+impl serde::Serialize for Decimal {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
 impl fmt::Display for Decimal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.0)
@@ -140,19 +149,11 @@ pub struct Quantity {
 }
 
 impl Quantity {
-    /// 构造（`sign` 由 `value` 派生）。
-    ///
-    /// # Errors
-    ///
-    /// 继承 [`Decimal::new`] 的错误。
-    pub fn new(value: &str, unit: QuantityUnit) -> BinanceResult<Self> {
-        let d = Decimal::new(value)?;
-        let sign = d.sign();
-        Ok(Self {
-            value: d,
-            unit,
-            sign,
-        })
+    /// 构造（`sign` 由已校验的 `Decimal` 派生）。
+    #[must_use]
+    pub fn new(value: Decimal, unit: QuantityUnit) -> Self {
+        let sign = value.sign();
+        Self { value, unit, sign }
     }
 
     /// 数值（原始表示）。
@@ -192,7 +193,29 @@ impl<'de> serde::Deserialize<'de> for Quantity {
             unit: QuantityUnit,
         }
         let raw = Raw::deserialize(deserializer)?;
-        Quantity::new(&raw.value, raw.unit).map_err(serde::de::Error::custom)
+        let value = Decimal::new(&raw.value).map_err(serde::de::Error::custom)?;
+        Ok(Quantity::new(value, raw.unit))
+    }
+}
+
+impl serde::Serialize for Quantity {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        #[derive(serde::Serialize)]
+        struct Raw<'a> {
+            value: &'a str,
+            unit: QuantityUnit,
+        }
+
+        serde::Serialize::serialize(
+            &Raw {
+                value: self.value.as_str(),
+                unit: self.unit,
+            },
+            serializer,
+        )
     }
 }
 
@@ -214,35 +237,38 @@ mod tests {
 
     #[test]
     fn negative_quantity_preserves_sign() {
-        let q = Quantity::new("-4.70443515", QuantityUnit::BaseAsset).unwrap();
+        let q = Quantity::new(
+            Decimal::new("-4.70443515").unwrap(),
+            QuantityUnit::BaseAsset,
+        );
         assert_eq!(q.sign(), Sign::Negative);
         assert_eq!(q.value().as_str(), "-4.70443515");
     }
 
     #[test]
     fn zero_quantity_is_zero() {
-        let q = Quantity::new("0", QuantityUnit::BaseAsset).unwrap();
+        let q = Quantity::new(Decimal::new("0").unwrap(), QuantityUnit::BaseAsset);
         assert_eq!(q.sign(), Sign::Zero);
     }
 
     #[test]
     fn negative_zero_is_zero_but_preserves_representation() {
-        let q = Quantity::new("-0", QuantityUnit::BaseAsset).unwrap();
+        let q = Quantity::new(Decimal::new("-0").unwrap(), QuantityUnit::BaseAsset);
         assert_eq!(q.sign(), Sign::Zero);
         assert_eq!(q.value().as_str(), "-0");
     }
 
     #[test]
     fn different_units_are_not_equal() {
-        let a = Quantity::new("1", QuantityUnit::BaseAsset).unwrap();
-        let b = Quantity::new("1", QuantityUnit::QuoteAsset).unwrap();
+        let a = Quantity::new(Decimal::new("1").unwrap(), QuantityUnit::BaseAsset);
+        let b = Quantity::new(Decimal::new("1").unwrap(), QuantityUnit::QuoteAsset);
         assert_ne!(a, b);
     }
 
     #[test]
     fn invalid_decimal_rejected() {
-        assert!(Quantity::new("", QuantityUnit::BaseAsset).is_err());
-        assert!(Quantity::new("abc", QuantityUnit::BaseAsset).is_err());
+        assert!(Decimal::new("").is_err());
+        assert!(Decimal::new("abc").is_err());
     }
 
     #[test]
@@ -268,9 +294,7 @@ mod tests {
             assert_eq!(parsed.as_str(), input);
             assert_eq!(parsed.sign(), sign);
             assert_eq!(
-                Quantity::new(input, QuantityUnit::BaseAsset)
-                    .unwrap()
-                    .sign(),
+                Quantity::new(Decimal::new(input).unwrap(), QuantityUnit::BaseAsset).sign(),
                 sign
             );
         }
@@ -289,6 +313,18 @@ mod tests {
         }
         for input in ["123", "null", "true", "[]", "{}"] {
             assert!(serde_json::from_str::<Decimal>(input).is_err());
+        }
+    }
+
+    #[test]
+    fn quantity_serialization_round_trip_preserves_value_and_unit() {
+        for value in ["-0", "+001.2300E-999"] {
+            let quantity = Quantity::new(Decimal::new(value).unwrap(), QuantityUnit::Contracts);
+            let json = serde_json::to_string(&quantity).unwrap();
+            let round_trip: Quantity = serde_json::from_str(&json).unwrap();
+            assert_eq!(round_trip.value().as_str(), value);
+            assert_eq!(round_trip.unit(), QuantityUnit::Contracts);
+            assert_eq!(json, format!(r#"{{"value":"{value}","unit":"Contracts"}}"#));
         }
     }
 }

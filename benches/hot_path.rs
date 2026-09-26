@@ -1,11 +1,13 @@
-//! 离线平均价格响应解析微基准；`--quick` 缩短本地自检。
+//! Spot 合成响应的离线解析微基准。
 
 #![forbid(unsafe_code)]
 
 use std::hint::black_box;
 use std::time::Instant;
 
-use binancex::parse::spot::parse_spot_avg_price;
+use binancex::parse::spot::{parse_spot_avg_price, parse_spot_reference_price};
+
+const REFERENCE_PRICE: &str = r#"{"symbol":"SYNTH","referencePrice":"-0"}"#;
 
 /// 合成夹具：元数据不属于源响应，解析器只接收 payload。
 const SAMPLE: &str = r#"{
@@ -28,6 +30,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for _ in 0..10 {
         black_box(parse_spot_avg_price(black_box(&payload))?);
+        black_box(parse_spot_reference_price(black_box(REFERENCE_PRICE))?);
     }
     let start = Instant::now();
     for _ in 0..n {
@@ -38,5 +41,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "离线平均价格解析：迭代={n} 总耗时={elapsed:?} 单次耗时={:?}",
         elapsed / n
     );
+    assert!(parse_spot_reference_price(REFERENCE_PRICE).is_ok());
     Ok(())
 }
